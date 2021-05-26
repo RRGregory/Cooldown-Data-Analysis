@@ -18,7 +18,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-print("Some message about what this script is")
+print("Running the script")
 print()
 
 #Get file path and name from user
@@ -33,6 +33,7 @@ file = open(file_path, "r")
 #G_str = input("Enter the Geometric factor: ")
 #skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
 
+cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
 Qcol_str = '11'
 Tcol_str = '24'
 Eacccol_str = '9'
@@ -40,6 +41,20 @@ G_str = '120'
 skiplines_str = '4'
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
+
+beta0_all = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+
+beta1_all = [1.43265730367638, 1.4731736554568,
+    1.46267321592333, 1.46116617646345,
+    1.46289120717899, 1.46313972701761]
+
+beta2_all = [1.77803816661436, 1.8706480191515,
+    1.85703995599432, 1.85657359333326,
+    1.82469356803503,1.86243947537751]
+
+beta3_all = [2.06107129508082, 2.21325662259346,
+    2.19252463157984, 2.1964531414152,
+    2.20609678777995, 2.20709554483536]
 
 #Convert the user input values to ints
 if skiplines_str != "":
@@ -60,6 +75,9 @@ Qdata = []
 Tdata = []
 Eaccdata = []
 Rssdata = [] #This will be the non-corrected Rs* data: G/Qo
+
+def Rs_correction(Bp, Rparam):
+    return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
 
 #Read the input file line by line and extract data
@@ -127,13 +145,30 @@ for Q in Qdata:
 
 ramp_Eacc = []
 ramp_Rss = []
+Rs = [] #Array for corrected Rs data
 
+#This loop gets the corrected Rs data and puts it in Rs
 for i in range(0,len(Eaccdata)):
 
     if i == 0:
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
         continue
+
+    if i == (len(Eaccdata)-1): #if you have reached the last data point
+
+        ramp_Eacc.append(Eaccdata[i])
+        ramp_Rss.append(Rssdata[i])
+
+        #Do the fit here
+        coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
+        #print(coef)
+        fit = np.poly1d(coef)
+        #print(fit)
+
+        for j in range(0,len(ramp_Rss)):
+            Rs.append(Rs_correction(ramp_Eacc[j], coef))
+        print("last ramp", ramp_Eacc[0])
 
     if Eaccdata[i-1] < Eaccdata[i]:
         ramp_Eacc.append(Eaccdata[i])
@@ -146,14 +181,16 @@ for i in range(0,len(Eaccdata)):
         fit = np.poly1d(coef)
         #print(fit)
 
+        for j in range(0,len(ramp_Rss)):
+            Rs.append(Rs_correction(ramp_Eacc[j], coef))
+        print("some ramp", ramp_Eacc[0])
+
         #Get ready to start the next ramp up fit
         ramp_Eacc.clear()
         ramp_Rss.clear()
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
 
-print(ramp_Eacc)
+#print(ramp_Eacc)
 
-print(len(Tdata), len(Rssdata), len(Eaccdata))
-#plt.plot(Tdata, Rsdata)
-#plt.show()
+print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
