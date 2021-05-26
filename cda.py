@@ -204,7 +204,7 @@ for i in range(0,len(FieldValues)):
     name = 'temp_Rs_' + str(FieldValues[i]) + 'uT.txt'
     file_names.append(name)
     #print(file_names[i])
-
+"""
 for i in range(0,len(Eaccdata)):
 
     for j in range(0,len(FieldValues)):
@@ -212,6 +212,26 @@ for i in range(0,len(Eaccdata)):
         if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
 
             entry = str(Tdata[i]) + "," + str(Rs[i]) + "\n"
-            file = open(file_names[j], "a")
-            file.write(entry)
-            file.close()
+            f = open(file_names[j], "a")
+            f.write(entry)
+            f.close()
+"""
+
+Tdata_sep = [] #list of lists for temperature data separated by field amplitude
+Rs_sep = [] #list of lists for surface resistance data separated by field amplitude
+
+for value in FieldValues:
+    Tdata_sep.append([])
+    Rs_sep.append([])
+
+
+for i in range(0,len(Eaccdata)):
+
+    for j in range(0,len(FieldValues)):
+
+        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
+            Tdata_sep[j].append(Tdata[i])
+            Rs_sep[j].append(Rs[i])
+
+plt.plot(Tdata_sep[0],Rs_sep[0], marker='o', linestyle='none')
+plt.show()
