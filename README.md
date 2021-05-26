@@ -11,3 +11,25 @@ Comments from Philipp's script:
  - output file(s) that contain:
      - fit results and uncertainties
      - fit quality parameter (R^2..)
+------------------------------------------------------------------------------------------------------------
+## Input Parameters
+
+This script makes Python lists containing Temperature, field amplitude, and quality factor (Q<sub>0</sub>) data.
+Note: the data input methodology is not really developed at this point, this will be a last step.
+
+
+## Converting Rs* to Rs Data
+
+At the beginning of this code there are lists of beta factors, described [here](https://journals.aps.org/prab/abstract/10.1103/PhysRevAccelBeams.21.122001). The beta factors used here have been calculated for six different RF modes: two for a QWR and four for a HWR. These beta factors will be used for converting the Rs* data to Rs data.
+
+To start, this code calculates the non-corrected Rs values (denoted Rs*) by taking the quotient of the geometry factor (G) and the quality factor (Q<sub>0</sub>) for every data point. These values are stored in a Pyhton list object which has the same indexing as the lists containing the Temperature, Eacc, and Q<sub>0</sub> data.
+
+The cooldown data can be separated into "ramp ups" of the cavity field. When taking data the cavity field will typically be increased from 10 to 70 mT, with one data point collected for every 10 mT. For each of these ramp ups a 3rd degree polynomial fit is made from the field dependent Rs* values and their corresponding peak fields (Rs*(B<sub>p</sub>). These values are fit to a polynomial function of the form:
+
+<img src="https://render.githubusercontent.com/render/math?math=y_{uncorrected} = ax^3%20%2B%20bx^2%20%2B%20cx%20%2B%20d">
+
+The coefficients of this polynomial are extracted and stored in an array. Finally, to calculate the field corrected Rs values for a given ramp up, the B<sub>p</sub> values from said ramp up are passed into a function exactly like the fit function calculated earlier, but with the polynomial coefficients multiplied by their appropriate beta factors:
+
+<img src="https://render.githubusercontent.com/render/math?math=y_{corrected} = a\beta_3x^3%20%2B%20b\beta_2x^2%20%2B%20c\beta_1x%20%2B%20d\beta_0">
+
+These corrected Rs values are then stored in a list with the same indexing as the other lists.
