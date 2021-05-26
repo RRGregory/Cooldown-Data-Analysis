@@ -197,41 +197,49 @@ for i in range(0,len(Eaccdata)):
 print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
 
 
-#Make list of file names to split the data by field amplitude
-file_names = []
-for i in range(0,len(FieldValues)):
-
-    name = 'temp_Rs_' + str(FieldValues[i]) + 'uT.txt'
-    file_names.append(name)
-    #print(file_names[i])
-"""
-for i in range(0,len(Eaccdata)):
-
-    for j in range(0,len(FieldValues)):
-
-        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
-
-            entry = str(Tdata[i]) + "," + str(Rs[i]) + "\n"
-            f = open(file_names[j], "a")
-            f.write(entry)
-            f.close()
-"""
-
-Tdata_sep = [] #list of lists for temperature data separated by field amplitude
-Rs_sep = [] #list of lists for surface resistance data separated by field amplitude
+Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
+Rs_sep = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude
 
 for value in FieldValues:
-    Tdata_sep.append([])
+    Inv_Tdata_sep.append([])
     Rs_sep.append([])
-
 
 for i in range(0,len(Eaccdata)):
 
     for j in range(0,len(FieldValues)):
 
         if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
-            Tdata_sep[j].append(Tdata[i])
-            Rs_sep[j].append(Rs[i])
+            Inv_Tdata_sep[j].append(1/Tdata[i])
+            Rs_sep[j].append(Rs[i]*(10**9))
 
-plt.plot(Tdata_sep[0],Rs_sep[0], marker='o', linestyle='none')
+
+colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
+shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
+
+legend_entries = []
+
+for i in range(0,len(FieldValues)):
+
+    name = str(FieldValues[i]) + " \u03BCT"
+    legend_entries.append(name)
+
+if len(legend_entries) > (len(colors)+len(shapes)):
+    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
+
+for i in range(0,len(legend_entries)):
+
+    if i < len(colors):
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=2, color=colors[i], label=legend_entries[i])
+    elif i < (len(colors)+len(shapes)):
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=2, color='black', label=legend_entries[i])
+    else:
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=2, color='black', label=legend_entries[i])
+
+
+plt.yscale('log')
+plt.xlabel(r'Inverse Temparature [K$^{-1}$]')
+plt.ylabel(r'R$_s[n\Omega]$')
+plt.legend(title='Field Amplitude')
+plt.title("Surface Resistance vs Inverse Temperature")
+plt.grid(True)
 plt.show()
