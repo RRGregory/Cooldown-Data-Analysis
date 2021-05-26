@@ -40,6 +40,8 @@ Eacccol_str = '9'
 G_str = '120'
 skiplines_str = '4'
 
+FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
+
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
 beta0_all = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -192,5 +194,24 @@ for i in range(0,len(Eaccdata)):
         ramp_Rss.append(Rssdata[i])
 
 #print(ramp_Eacc)
-
 print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
+
+
+#Make list of file names to split the data by field amplitude
+file_names = []
+for i in range(0,len(FieldValues)):
+
+    name = 'temp_Rs_' + str(FieldValues[i]) + 'uT.txt'
+    file_names.append(name)
+    #print(file_names[i])
+
+for i in range(0,len(Eaccdata)):
+
+    for j in range(0,len(FieldValues)):
+
+        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
+
+            entry = str(Tdata[i]) + "," + str(Rs[i]) + "\n"
+            file = open(file_names[j], "a")
+            file.write(entry)
+            file.close()
