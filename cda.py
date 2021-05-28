@@ -16,6 +16,7 @@
  * =======================================================================================
  """
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator, FixedFormatter
 import numpy as np
 from scipy.optimize import curve_fit
 from lmfit import Model
@@ -173,7 +174,7 @@ for i in range(0,len(Eaccdata)):
 
         for j in range(0,len(ramp_Rss)):
             Rs.append(Rs_correction(ramp_Eacc[j], coef))
-        print("last ramp", ramp_Eacc[0])
+        #print("last ramp", ramp_Eacc[0])
 
     if Eaccdata[i-1] < Eaccdata[i]:
         ramp_Eacc.append(Eaccdata[i])
@@ -188,7 +189,7 @@ for i in range(0,len(Eaccdata)):
 
         for j in range(0,len(ramp_Rss)):
             Rs.append(Rs_correction(ramp_Eacc[j], coef))
-        print("some ramp", ramp_Eacc[0])
+        #print("some ramp", ramp_Eacc[0])
 
         #Get ready to start the next ramp up fit
         ramp_Eacc.clear()
@@ -252,28 +253,52 @@ params['Rres'].vary = False
 params['f'].vary = False
 params['Tc'].vary = False
 
+fig1, ax1 = plt.subplots(nrows=1, ncols=1)
+fig2, ax2 = plt.subplots(nrows=1, ncols=1)
+
 for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
     res_min = min(Rs_sep[i])
     params['Rres'].value = res_min
     result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
+    print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
+
 
     #plot the data points and fit lines
     if i < len(colors):
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
-        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
+        ax2.plot(Inv_Tdata_sep[i],(abs(result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
     elif i < (len(colors)+len(shapes)):
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
-        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
+        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
+        ax2.plot(Inv_Tdata_sep[i],(abs(result.residual))*100/Rs_sep[i], marker=shapes[i-len(colors)], markersize=3, color='black', label=legend_entries[i])
     else:
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
-        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
+        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
+        ax2.plot(Inv_Tdata_sep[i],(abs(result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
-plt.yscale('log')
-plt.xlabel(r'Inverse Temparature [K$^{-1}$]')
-plt.ylabel(r'R$_s[n\Omega]$')
-plt.legend(title='Field Amplitude')
-plt.title("Surface Resistance vs Inverse Temperature")
-plt.grid(True)
+
+x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
+ r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
+x_locator = FixedLocator([0.1, 1/9, 0.125, 1/7, 1/6, 0.2, 1/4.5, 0.25, 1/3.5, 1/3, 0.4, 1/2.2, 0.5, 1/1.8, 1/1.7])
+
+ax1.set_yscale('log')
+ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
+ax1.set_ylabel(r'R$_s[n\Omega]$')
+ax1.xaxis.set_major_formatter(x_formatter)
+ax1.xaxis.set_major_locator(x_locator)
+ax1.legend(title='Field Amplitude')
+ax1.set_title("Surface Resistance vs Inverse Temperature")
+ax1.grid(True)
+
+ax2.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
+ax2.set_ylabel(r"Residual/R$_s$ [%]")
+ax2.xaxis.set_major_formatter(x_formatter)
+ax2.xaxis.set_major_locator(x_locator)
+ax2.set_title(r"Percent Difference between observed R$_s$ and values calculated from fit parameters")
+ax2.legend(title='Field Amplitude')
+ax2.grid(True)
+
 plt.show()
