@@ -17,6 +17,8 @@
  """
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import curve_fit
+from lmfit import Model
 
 print("Running the script")
 print()
@@ -34,6 +36,7 @@ file = open(file_path, "r")
 #skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
 
 cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
+freq = 217 #MHz
 Qcol_str = '11'
 Tcol_str = '24'
 Eacccol_str = '9'
@@ -198,18 +201,24 @@ print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
 
 
 Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
+Tdata_sep = [] #list of listst for temperature data separated by field amplitude
 Rs_sep = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude
 
 for value in FieldValues:
     Inv_Tdata_sep.append([])
+    Tdata_sep.append([])
     Rs_sep.append([])
 
+#Make two lists containing lists of the inverse temperature data and the
+#corrected surface resistance data. Each sub-list corresponds to a different
+#field amplitude
 for i in range(0,len(Eaccdata)):
 
     for j in range(0,len(FieldValues)):
 
         if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
             Inv_Tdata_sep[j].append(1/Tdata[i])
+            Tdata_sep[j].append(Tdata[i])
             Rs_sep[j].append(Rs[i]*(10**9))
 
 
@@ -226,15 +235,40 @@ for i in range(0,len(FieldValues)):
 if len(legend_entries) > (len(colors)+len(shapes)):
     print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
 
+def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
+    kB = 8.617333262145*10**(-5) #Boltzman constant
+    hbar = 6.582119569*10**(-16)
+
+    a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
+    C = 8/(np.exp(0.5772156649))
+
+    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
+
+initial_res_min = min(Rs_sep[0])
+
+fmodel = Model(BCS)
+params = fmodel.make_params(a0=0.001, a1=1.5, Rres=initial_res_min, f=freq, Tc=9.25)
+params['Rres'].vary = False
+params['f'].vary = False
+params['Tc'].vary = False
+
 for i in range(0,len(legend_entries)):
 
-    if i < len(colors):
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=2, color=colors[i], label=legend_entries[i])
-    elif i < (len(colors)+len(shapes)):
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=2, color='black', label=legend_entries[i])
-    else:
-        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=2, color='black', label=legend_entries[i])
+    #Fit each feild amplitude data set to the RBCS formula
+    res_min = min(Rs_sep[i])
+    params['Rres'].value = res_min
+    result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
 
+    #plot the data points and fit lines
+    if i < len(colors):
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
+    elif i < (len(colors)+len(shapes)):
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
+        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
+    else:
+        plt.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
+        plt.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
 
 plt.yscale('log')
 plt.xlabel(r'Inverse Temparature [K$^{-1}$]')
