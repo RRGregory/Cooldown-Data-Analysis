@@ -29,12 +29,12 @@ print()
 file_path = '/Users/ruthgregory/Documents/SRF/Data/before_bake/QWR_217MHz_cooldown_10uT_2019_12_06_08h30_QoData.txt'
 file = open(file_path, "r")
 
-#Get information about the input data table from user
-#Qcol_str = input("Enter the column number of your Quality Factor data: ")
-#Tcol_str = input("Enter the column number of your temperature data: ")
-#Eacccol_str = input("Enter the column number of your accelerating field data: ")
-#G_str = input("Enter the Geometric factor: ")
-#skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
+Get information about the input data table from user
+Qcol_str = input("Enter the column number of your Quality Factor data: ")
+Tcol_str = input("Enter the column number of your temperature data: ")
+Eacccol_str = input("Enter the column number of your accelerating field data: ")
+G_str = input("Enter the Geometric factor: ")
+skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
 
 cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
 freq = 217 #MHz
