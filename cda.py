@@ -25,28 +25,33 @@ print("Running the script")
 print()
 
 #Get file path and name from user
-#file_path = input("Enter the full path and name of your input data file: ")
-file_path = '/Users/ruthgregory/Documents/SRF/Data/before_bake/QWR_217MHz_cooldown_10uT_2019_12_06_08h30_QoData.txt'
+file_path = input("Enter the full path and name of your input data file: ")
 file = open(file_path, "r")
 
-Get information about the input data table from user
+#Get information about the input data table from user
 Qcol_str = input("Enter the column number of your Quality Factor data: ")
 Tcol_str = input("Enter the column number of your temperature data: ")
 Eacccol_str = input("Enter the column number of your accelerating field data: ")
-G_str = input("Enter the Geometric factor: ")
 skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
 
-cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
-freq = 217 #MHz
-Qcol_str = '11'
-Tcol_str = '24'
-Eacccol_str = '9'
-G_str = '120'
-skiplines_str = '4'
+G_vals = [37.47, 113.7, 60.39, 120.77, 181.08, 241.24]
+frequencies = [217, 647, 389, 778, 1166, 1555]
+
+msg = (
+    'Enter a number to choose your coaxial cavity: {sep}'
+    '{sep}'
+    'Enter 1 for QWR 217 MHz with G = 37.47 Ohms {sep}'
+    'Enter 2 for QWR 647 MHz with G = 113.7 Ohms {sep}'
+    'Enter 3 for HWR 389 MHz with G = 60.39 Ohms {sep}'
+    'Enter 4 for HWR 778 MHz with G = 120.77 Ohms {sep}'
+    'Enter 5 for HWR 1166 MHz with G = 181.08 Ohms {sep}'
+    'Enter 6 for HWR 1555 MHz with G = 241.24 Ohms'
+    '{sep}').format(sep='\n')
+print(msg)
+
+in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
 
 FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
-
-skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
 beta0_all = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
@@ -62,19 +67,27 @@ beta3_all = [2.06107129508082, 2.21325662259346,
     2.19252463157984, 2.1964531414152,
     2.20609678777995, 2.20709554483536]
 
-#Convert the user input values to ints
+skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
+
+#Convert the user input values to ints and get parameters
 if skiplines_str != "":
     skiplines = int(skiplines_str)
 
 Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
 Eacccol = int(Eacccol_str)
-G = int(G_str)
+cavity = int(in_cavity)
+
 
 #Subtract 1 because Python indexing starts at 0
 Qcol -= 1
 Tcol -= 1
 Eacccol -= 1
+cavity -= 1
+
+#Get frequency and G factor values
+freq = frequencies[cavity]
+G = G_vals[cavity]
 
 #Create empty lists to hold the data
 Qdata = []
