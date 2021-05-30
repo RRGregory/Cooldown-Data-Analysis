@@ -33,3 +33,7 @@ The coefficients of this polynomial are extracted and stored in an array. Finall
 <img src="https://render.githubusercontent.com/render/math?math=y_{corrected} = a\beta_3x^3%20%2B%20b\beta_2x^2%20%2B%20c\beta_1x%20%2B%20d\beta_0">
 
 These corrected Rs values are then stored in a list with the same indexing as the other lists.
+
+## Other notes
+
+This script expects the increments/step size of the field amplitude data to be an integer value, otherwise unexpected things might happen. I can change that later to make the script handle non-integer field amplitude step sizes if needed.
