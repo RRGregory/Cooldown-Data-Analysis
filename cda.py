@@ -15,44 +15,20 @@
  *
  * =======================================================================================
  """
+print("Running the script")
+print()
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedLocator, FixedFormatter
 import numpy as np
 from scipy.optimize import curve_fit
 from lmfit import Model
 
-print("Running the script")
-print()
-
-#Get file path and name from user
-file_path = input("Enter the full path and name of your input data file: ")
-file = open(file_path, "r")
-
-#Get information about the input data table from user
-Qcol_str = input("Enter the column number of your Quality Factor data: ")
-Tcol_str = input("Enter the column number of your temperature data: ")
-Eacccol_str = input("Enter the column number of your accelerating field data: ")
-skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
-
-G_vals = [37.47, 113.7, 60.39, 120.77, 181.08, 241.24]
-frequencies = [217, 647, 389, 778, 1166, 1555]
-
-msg = (
-    'Enter a number to choose your coaxial cavity: {sep}'
-    '{sep}'
-    'Enter 1 for QWR 217 MHz with G = 37.47 Ohms {sep}'
-    'Enter 2 for QWR 647 MHz with G = 113.7 Ohms {sep}'
-    'Enter 3 for HWR 389 MHz with G = 60.39 Ohms {sep}'
-    'Enter 4 for HWR 778 MHz with G = 120.77 Ohms {sep}'
-    'Enter 5 for HWR 1166 MHz with G = 181.08 Ohms {sep}'
-    'Enter 6 for HWR 1555 MHz with G = 241.24 Ohms'
-    '{sep}').format(sep='\n')
-print(msg)
-
-in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
-
-FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
-
+"""---------------------------------------------------------------------------------------
+Get all the input parameters ready
+---------------------------------------------------------------------------------------"""
+#These are the beta values to use in the fit function corrections when converting Rs* to Rs
+#The six entries in the lists correspond to the six different coaxial cavities
 beta0_all = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 beta1_all = [1.43265730367638, 1.4731736554568,
@@ -67,7 +43,43 @@ beta3_all = [2.06107129508082, 2.21325662259346,
     2.19252463157984, 2.1964531414152,
     2.20609678777995, 2.20709554483536]
 
+#Possible geometric factor and frequency values for the six cavities
+G_vals = [37.47, 113.7, 60.39, 120.77, 181.08, 241.24]
+frequencies = [217, 647, 389, 778, 1166, 1555]
+
+#Get file path and name from user
+file_path = input("Enter the full path and name of your input data file: ")
+file = open(file_path, "r")
+
+#Get information about the input data table from user
+Qcol_str = input("Enter the column number of your Quality Factor data: ")
+Tcol_str = input("Enter the column number of your temperature data: ")
+Eacccol_str = input("Enter the column number of your accelerating field data: ")
+field_vals_str = input("Enter the approximate target accelerating field values separated by a space: ")
+skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
+
+msg = (
+    '{sep}'
+    'Enter a number to choose your coaxial cavity: {sep}'
+    '{sep}'
+    'Enter 1 for QWR 217 MHz with G = 37.47 Ohms {sep}'
+    'Enter 2 for QWR 648 MHz with G = 113.7 Ohms {sep}'
+    'Enter 3 for HWR 389 MHz with G = 60.39 Ohms {sep}'
+    'Enter 4 for HWR 778 MHz with G = 120.77 Ohms {sep}'
+    'Enter 5 for HWR 1166 MHz with G = 181.08 Ohms {sep}'
+    'Enter 6 for HWR 1555 MHz with G = 241.24 Ohms'
+    '{sep}').format(sep='\n')
+print(msg)
+
+in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
+
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
+
+#Get the list of accelerating field values
+FieldValues = []
+field_vals_list = field_vals_str.split()
+for val in field_vals_list:
+    FieldValues.append(float(val))
 
 #Convert the user input values to ints and get parameters
 if skiplines_str != "":
@@ -77,7 +89,6 @@ Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
 Eacccol = int(Eacccol_str)
 cavity = int(in_cavity)
-
 
 #Subtract 1 because Python indexing starts at 0
 Qcol -= 1
@@ -95,10 +106,9 @@ Tdata = []
 Eaccdata = []
 Rssdata = [] #This will be the non-corrected Rs* data: G/Qo
 
-def Rs_correction(Bp, Rparam):
-    return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
-
-
+"""---------------------------------------------------------------------------------------
+Read in the data from the input file
+---------------------------------------------------------------------------------------"""
 #Read the input file line by line and extract data
 line_cnt = 1 #line count, it will start with line 1
 for line in file:
@@ -115,7 +125,12 @@ for line in file:
         continue
 
     try: #add data to the lists
-        Qdata.append(float(columns[Qcol]))
+        if float(columns[Qcol]) > 0:
+            Qdata.append(float(columns[Qcol]))
+        else:
+            print("Warning: Qo value is less than 0 on line", line_cnt, "skipping line", line_cnt)
+            line_cnt += 1
+            continue
     except IndexError:
         print("Warning: index error on line", line_cnt, "in the Q column. Skipping line", line_cnt)
         line_cnt += 1
@@ -156,15 +171,22 @@ for line in file:
     line_cnt += 1
 
 file.close()
+#print(len(Qdata), len(Tdata), len(Eaccdata))
 
+"""---------------------------------------------------------------------------------------
+For each accelerating field ramp up, calculate the feild corrected Rs values
+---------------------------------------------------------------------------------------"""
 #Get the non-corrected Rs* data
 for Q in Qdata:
     Rssdata.append(G/Q)
 
-
 ramp_Eacc = []
 ramp_Rss = []
 Rs = [] #Array for corrected Rs data
+
+#Function for doing the Rs* to Rs correction using the beta factors
+def Rs_correction(Bp, Rparam):
+    return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
 #This loop gets the corrected Rs data and puts it in Rs
 for i in range(0,len(Eaccdata)):
@@ -182,7 +204,7 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
-        fit = np.poly1d(coef)
+        #fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -197,7 +219,7 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
-        fit = np.poly1d(coef)
+        #fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -211,8 +233,11 @@ for i in range(0,len(Eaccdata)):
         ramp_Rss.append(Rssdata[i])
 
 #print(ramp_Eacc)
-print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
+#print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
 
+"""---------------------------------------------------------------------------------------
+Separate the data by different field amplitude values
+---------------------------------------------------------------------------------------"""
 
 Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
 Tdata_sep = [] #list of listst for temperature data separated by field amplitude
@@ -230,25 +255,16 @@ for i in range(0,len(Eaccdata)):
 
     for j in range(0,len(FieldValues)):
 
-        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
+        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] >= FieldValues[j]-0.5):
             Inv_Tdata_sep[j].append(1/Tdata[i])
             Tdata_sep[j].append(Tdata[i])
             Rs_sep[j].append(Rs[i]*(10**9))
 
+"""---------------------------------------------------------------------------------------
+Fit the data to the RBCS formula and plot the results
+---------------------------------------------------------------------------------------"""
 
-colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
-shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
-
-legend_entries = []
-
-for i in range(0,len(FieldValues)):
-
-    name = str(FieldValues[i]) + " \u03BCT"
-    legend_entries.append(name)
-
-if len(legend_entries) > (len(colors)+len(shapes)):
-    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
-
+#RBCS fit function
 def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
@@ -269,14 +285,26 @@ params['Tc'].vary = False
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
 
+colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
+shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
+
+legend_entries = []
+
+for i in range(0,len(FieldValues)):
+
+    name = str(FieldValues[i]) + " \u03BCT"
+    legend_entries.append(name)
+
+if len(legend_entries) > (len(colors)+len(shapes)):
+    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
+
 for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
     res_min = min(Rs_sep[i])
     params['Rres'].value = res_min
     result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
-    print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
-
+    #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
 
     #plot the data points and fit lines
     if i < len(colors):
@@ -291,7 +319,6 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
-
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
