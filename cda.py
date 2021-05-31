@@ -274,13 +274,7 @@ def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
 
     return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
 
-initial_res_min = min(Rs_sep[0])
-
 fmodel = Model(BCS)
-params = fmodel.make_params(a0=0.001, a1=1.5, Rres=initial_res_min, f=freq, Tc=9.25)
-params['Rres'].vary = False
-params['f'].vary = False
-params['Tc'].vary = False
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
@@ -292,7 +286,7 @@ legend_entries = []
 
 for i in range(0,len(FieldValues)):
 
-    name = str(FieldValues[i]) + " \u03BCT"
+    name = str(FieldValues[i]) + " mT"
     legend_entries.append(name)
 
 if len(legend_entries) > (len(colors)+len(shapes)):
@@ -302,7 +296,10 @@ for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
     res_min = min(Rs_sep[i])
-    params['Rres'].value = res_min
+    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, f=freq, Tc=9.25)
+    params['f'].vary = False
+    params['Tc'].vary = False
+
     result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
     #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
 
