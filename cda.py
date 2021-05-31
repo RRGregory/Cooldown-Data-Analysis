@@ -15,39 +15,20 @@
  *
  * =======================================================================================
  """
+print("Running the script")
+print()
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedLocator, FixedFormatter
 import numpy as np
 from scipy.optimize import curve_fit
 from lmfit import Model
 
-print("Running the script")
-print()
-
-#Get file path and name from user
-#file_path = input("Enter the full path and name of your input data file: ")
-file_path = '/Users/ruthgregory/Documents/SRF/Data/before_bake/QWR_217MHz_cooldown_10uT_2019_12_06_08h30_QoData.txt'
-file = open(file_path, "r")
-
-#Get information about the input data table from user
-#Qcol_str = input("Enter the column number of your Quality Factor data: ")
-#Tcol_str = input("Enter the column number of your temperature data: ")
-#Eacccol_str = input("Enter the column number of your accelerating field data: ")
-#G_str = input("Enter the Geometric factor: ")
-#skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
-
-cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
-freq = 217 #MHz
-Qcol_str = '11'
-Tcol_str = '24'
-Eacccol_str = '9'
-G_str = '120'
-skiplines_str = '4'
-
-FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
-
-skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
-
+"""---------------------------------------------------------------------------------------
+Get all the input parameters ready
+---------------------------------------------------------------------------------------"""
+#These are the beta values to use in the fit function corrections when converting Rs* to Rs
+#The six entries in the lists correspond to the six different coaxial cavities
 beta0_all = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 beta1_all = [1.43265730367638, 1.4731736554568,
@@ -62,9 +43,22 @@ beta3_all = [2.06107129508082, 2.21325662259346,
     2.19252463157984, 2.1964531414152,
     2.20609678777995, 2.20709554483536]
 
-#Convert the user input values to ints
-if skiplines_str != "":
-    skiplines = int(skiplines_str)
+#Get file path and name from user
+#file_path = input("Enter the full path and name of your input data file: ")
+file_path = '/Users/ruthgregory/Documents/SRF/Data/before_bake/QWR_217MHz_cooldown_10uT_2019_12_06_08h30_QoData.txt'
+file = open(file_path, "r")
+
+cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
+freq = 217 #MHz
+Qcol_str = '11'
+Tcol_str = '24'
+Eacccol_str = '9'
+G_str = '120'
+SWR = 1.17926 #Standing wave ratio
+
+FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
+
+skiplines = 4 #The default number of lines to skip at the beginning of the table is zero
 
 Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
@@ -82,10 +76,12 @@ Tdata = []
 Eaccdata = []
 Rssdata = [] #This will be the non-corrected Rs* data: G/Qo
 
-def Rs_correction(Bp, Rparam):
-    return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
+Rss_err = [] #Uncertainties for Rs* values
+weights = []
 
-
+"""---------------------------------------------------------------------------------------
+Read in the data from the input file
+---------------------------------------------------------------------------------------"""
 #Read the input file line by line and extract data
 line_cnt = 1 #line count, it will start with line 1
 for line in file:
@@ -143,15 +139,21 @@ for line in file:
     line_cnt += 1
 
 file.close()
-
+"""---------------------------------------------------------------------------------------
+For each accelerating field ramp up, calculate the feild corrected Rs values
+---------------------------------------------------------------------------------------"""
 #Get the non-corrected Rs* data
-for Q in Qdata:
-    Rssdata.append(G/Q)
-
+for i in range(0,len(Qdata)):
+    Rssdata.append(G/Qdata[i])
+    Rss_err.append(Rssdata[i]*(SWR-1)/2)
+    weights.append(1 - Rss_err[i]/Rssdata[i])
 
 ramp_Eacc = []
 ramp_Rss = []
 Rs = [] #Array for corrected Rs data
+
+def Rs_correction(Bp, Rparam):
+    return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
 #This loop gets the corrected Rs data and puts it in Rs
 for i in range(0,len(Eaccdata)):
@@ -169,7 +171,6 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
-        fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -184,7 +185,6 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
-        fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -200,6 +200,9 @@ for i in range(0,len(Eaccdata)):
 #print(ramp_Eacc)
 print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
 
+"""---------------------------------------------------------------------------------------
+Separate the data by different field amplitude values
+---------------------------------------------------------------------------------------"""
 
 Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
 Tdata_sep = [] #list of listst for temperature data separated by field amplitude
@@ -222,20 +225,9 @@ for i in range(0,len(Eaccdata)):
             Tdata_sep[j].append(Tdata[i])
             Rs_sep[j].append(Rs[i]*(10**9))
 
-
-colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
-shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
-
-legend_entries = []
-
-for i in range(0,len(FieldValues)):
-
-    name = str(FieldValues[i]) + " \u03BCT"
-    legend_entries.append(name)
-
-if len(legend_entries) > (len(colors)+len(shapes)):
-    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
-
+"""---------------------------------------------------------------------------------------
+Fit the data to the RBCS formula and plot the results
+---------------------------------------------------------------------------------------"""
 def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
@@ -245,25 +237,34 @@ def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
 
     return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
 
-initial_res_min = min(Rs_sep[0])
-
 fmodel = Model(BCS)
-params = fmodel.make_params(a0=0.001, a1=1.5, Rres=initial_res_min, f=freq, Tc=9.25)
-params['Rres'].vary = False
-params['f'].vary = False
-params['Tc'].vary = False
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
+
+colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
+shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
+
+legend_entries = []
+
+for i in range(0,len(FieldValues)):
+
+    name = str(FieldValues[i]) + " mT"
+    legend_entries.append(name)
+
+if len(legend_entries) > (len(colors)+len(shapes)):
+    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
 
 for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
     res_min = min(Rs_sep[i])
-    params['Rres'].value = res_min
+    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, f=freq, Tc=9.25)
+    params['f'].vary = False
+    params['Tc'].vary = False
+
     result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
     print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
-
 
     #plot the data points and fit lines
     if i < len(colors):
