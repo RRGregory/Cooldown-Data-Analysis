@@ -261,6 +261,33 @@ for i in range(0,len(Eaccdata)):
             Rs_sep[j].append(Rs[i]*(10**9))
 
 """---------------------------------------------------------------------------------------
+Get values for the superfluid transition of helium
+---------------------------------------------------------------------------------------"""
+SF_field_vals = [] #list of rf field values for ramp containing sf helium transition
+SF_Rs_vals = []
+ramp_vals_cnt = 0
+
+for i in range(0, len(Tdata)):
+
+    if i==0:
+        ramp_vals_cnt += 1
+        continue
+
+    if Eaccdata[i-1] < Eaccdata[i]:
+        ramp_vals_cnt += 1
+        continue
+
+    elif Eaccdata[i-1] > Eaccdata[i] and Tdata[i] >= 2.176:
+        ramp_vals_cnt = 1
+        continue
+
+    elif Eaccdata[i-1] > Eaccdata[i] and Tdata[i] <= 2.176:
+
+        for j in range((i-ramp_vals_cnt), i):
+            SF_field_vals.append(Eaccdata[i])
+            SF_Rs_vals.append(Rs[i])
+
+"""---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
 
