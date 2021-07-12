@@ -277,15 +277,29 @@ for i in range(0, len(Tdata)):
         ramp_vals_cnt += 1
         continue
 
-    elif Eaccdata[i-1] > Eaccdata[i] and Tdata[i] >= 2.176:
+    elif (Eaccdata[i-1] > Eaccdata[i]) and Tdata[i] >= 2.175:
         ramp_vals_cnt = 1
         continue
 
-    elif Eaccdata[i-1] > Eaccdata[i] and Tdata[i] <= 2.176:
+    elif (Eaccdata[i-1] > Eaccdata[i]) and Tdata[i] <= 2.175:
 
         for j in range((i-ramp_vals_cnt), i):
-            SF_field_vals.append(Eaccdata[i])
-            SF_Rs_vals.append(Rs[i])
+            SF_field_vals.append(Eaccdata[j])
+            SF_Rs_vals.append(Rs[j])
+
+        break
+
+file_sf = open('sf_data.csv', 'a')
+file_sf.write(file.name)
+file_sf.write('\n')
+
+for k in range(0, len(SF_field_vals)):
+    file_sf.write(str(SF_field_vals[k]))
+    file_sf.write(',')
+    file_sf.write(str(SF_Rs_vals[k]))
+    file_sf.write('\n')
+
+file_sf.close()
 
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
