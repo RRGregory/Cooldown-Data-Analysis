@@ -104,8 +104,7 @@ G = G_vals[cavity]
 Qdata = []
 Tdata = []
 Eaccdata = []
-Rssdata = [] #This will be the non-corrected Rs* data: G/Qo
-
+Rssdata = []
 """---------------------------------------------------------------------------------------
 Read in the data from the input file
 ---------------------------------------------------------------------------------------"""
@@ -234,35 +233,81 @@ for i in range(0,len(Eaccdata)):
 
 #print(ramp_Eacc)
 #print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
+"""---------------------------------------------------------------------------------------
+Separate the data before and after the superfluid helium transition
+---------------------------------------------------------------------------------------"""
+#The _bt means before transition, as in before the superfluid transition of helium
+Qdata_bt = []
+Tdata_bt = []
+Eaccdata_bt = []
+Rs_bt = [] #Rs is corrected surface resistance data
 
+#The _at means after transition, as in after the superfluid transition of helium
+Qdata_at = []
+Tdata_at = []
+Eaccdata_at = []
+Rs_at = []
+
+for i in range(0, len(Tdata)):
+
+    if Tdata[i] >= 2.174:
+        Qdata_bt.append(Qdata[i])
+        Tdata_bt.append(Tdata[i])
+        Eaccdata_bt.append(Eaccdata[i])
+        Rs_bt.append(Rs[i])
+
+    elif Tdata[i] < 2.174:
+        Qdata_at.append(Qdata[i])
+        Tdata_at.append(Tdata[i])
+        Eaccdata_at.append(Eaccdata[i])
+        Rs_at.append(Rs[i])
 """---------------------------------------------------------------------------------------
 Separate the data by different field amplitude values
 ---------------------------------------------------------------------------------------"""
+Inv_Tdata_sep_bt = [] #list of lists for inverse temperature data separated by field amplitude before superfluid helium transition (bt)
+Tdata_sep_bt = [] #list of lists for temperature data separated by field amplitude before superfluid helium transition (bt)
+Rs_sep_bt = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude before superfluid helium transition (bt)
 
-Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
-Tdata_sep = [] #list of listst for temperature data separated by field amplitude
-Rs_sep = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude
+Inv_Tdata_sep_at = [] #list of lists for inverse temperature data separated by field amplitude after superfluid helium transition (at)
+Tdata_sep_at = [] #list of lists for temperature data separated by field amplitude after superfluid helium transition (at)
+Rs_sep_at = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude after superfluid helium transition (at)
 
 for value in FieldValues:
-    Inv_Tdata_sep.append([])
-    Tdata_sep.append([])
-    Rs_sep.append([])
+
+    Inv_Tdata_sep_bt.append([])
+    Tdata_sep_bt.append([])
+    Rs_sep_bt.append([])
+
+    Inv_Tdata_sep_at.append([])
+    Tdata_sep_at.append([])
+    Rs_sep_at.append([])
 
 #Make two lists containing lists of the inverse temperature data and the
 #corrected surface resistance data. Each sub-list corresponds to a different
-#field amplitude
-for i in range(0,len(Eaccdata)):
+#field amplitude. Do this once for data before superfluid helium transition,
+#and again for after superfluid helium transition
+for i in range(0,len(Eaccdata_bt)):
 
     for j in range(0,len(FieldValues)):
 
-        if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] >= FieldValues[j]-0.5):
-            Inv_Tdata_sep[j].append(1/Tdata[i])
-            Tdata_sep[j].append(Tdata[i])
-            Rs_sep[j].append(Rs[i]*(10**9))
+        if (Eaccdata_bt[i] < FieldValues[j]+0.5) and (Eaccdata_bt[i] >= FieldValues[j]-0.5):
+            Inv_Tdata_sep_bt[j].append(1/Tdata_bt[i])
+            Tdata_sep_bt[j].append(Tdata_bt[i])
+            Rs_sep_bt[j].append(Rs_bt[i]*(10**9))
+
+for i in range(0,len(Eaccdata_at)):
+
+    for j in range(0,len(FieldValues)):
+
+        if (Eaccdata_at[i] < FieldValues[j]+0.5) and (Eaccdata_at[i] >= FieldValues[j]-0.5):
+            Inv_Tdata_sep_at[j].append(1/Tdata_at[i])
+            Tdata_sep_at[j].append(Tdata_at[i])
+            Rs_sep_at[j].append(Rs_at[i]*(10**9))
 
 """---------------------------------------------------------------------------------------
 Get values for the superfluid transition of helium
 ---------------------------------------------------------------------------------------"""
+"""
 SF_field_vals = [] #list of rf field values for ramp containing sf helium transition
 SF_Rs_vals = []
 ramp_vals_cnt = 0
@@ -287,7 +332,7 @@ for i in range(0, len(Tdata)):
             SF_field_vals.append(Eaccdata[j])
             SF_Rs_vals.append(Rs[j])
 
-        break
+        break #Then get ramp after sf transition
 
 file_sf = open('sf_data.csv', 'a')
 file_sf.write(file.name)
@@ -300,7 +345,7 @@ for k in range(0, len(SF_field_vals)):
     file_sf.write('\n')
 
 file_sf.close()
-
+"""
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
@@ -336,27 +381,39 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
-    res_min = min(Rs_sep[i])
-    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, f=freq, Tc=9.25)
-    params['f'].vary = False
-    params['Tc'].vary = False
+    res_min_bt = min(Rs_sep_bt[i])
+    params_bt = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_bt, f=freq, Tc=9.25)
+    params_bt['f'].vary = False
+    params_bt['Tc'].vary = False
 
-    result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
+    res_min_at = min(Rs_sep_at[i])
+    params_at = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_at, f=freq, Tc=9.25)
+    params_at['f'].vary = False
+    params_at['Tc'].vary = False
+
+    result_bt = fmodel.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+    result_at = fmodel.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
     #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
 
     #plot the data points and fit lines
     if i < len(colors):
-        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
-        ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
-        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep_bt[i],Rs_sep_bt[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep_at[i],Rs_sep_at[i], marker='o', linestyle='none', markersize=4, color=colors[i])
+
+        ax1.plot(Inv_Tdata_sep_bt[i], result_bt.best_fit, marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep_at[i], result_at.best_fit, marker='None', linestyle='--',color=colors[i])
+
+        ax2.plot(Inv_Tdata_sep_bt[i],((result_bt.residual))*100/Rs_sep_bt[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep_at[i],((result_at.residual))*100/Rs_sep_at[i], marker='o', markersize=3, color=colors[i])
+
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
-        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker=shapes[i-len(colors)], markersize=3, color='black', label=legend_entries[i])
+        #ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker=shapes[i-len(colors)], markersize=3, color='black', label=legend_entries[i])
     else:
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
-        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
+        #ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
