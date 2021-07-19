@@ -73,6 +73,8 @@ print(msg)
 
 in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
 
+fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
+
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
 #Get the list of accelerating field values
@@ -307,9 +309,12 @@ for i in range(0,len(Eaccdata_at)):
 """---------------------------------------------------------------------------------------
 Get values for the superfluid transition of helium
 ---------------------------------------------------------------------------------------"""
-"""
-SF_field_vals = [] #list of rf field values for ramp containing sf helium transition
-SF_Rs_vals = []
+
+SF_field_vals = [] #list of rf field values for ramp before and after sf helium transition
+SF_Rs_vals = [] #Corresponding rf field values
+SF_T_vals = []
+
+ramp_vals_cnt_bt = 0
 ramp_vals_cnt = 0
 
 for i in range(0, len(Tdata)):
@@ -322,17 +327,28 @@ for i in range(0, len(Tdata)):
         ramp_vals_cnt += 1
         continue
 
-    elif (Eaccdata[i-1] > Eaccdata[i]) and Tdata[i] >= 2.175:
+    elif (Eaccdata[i-1] > Eaccdata[i]) and Tdata[i] > 2.175:
+        ramp_vals_cnt_bt = ramp_vals_cnt
         ramp_vals_cnt = 1
         continue
 
     elif (Eaccdata[i-1] > Eaccdata[i]) and Tdata[i] <= 2.175:
 
-        for j in range((i-ramp_vals_cnt), i):
+        for j in range((i-ramp_vals_cnt-ramp_vals_cnt_bt), i):
             SF_field_vals.append(Eaccdata[j])
             SF_Rs_vals.append(Rs[j])
+            SF_T_vals.append(Tdata[j])
 
-        break #Then get ramp after sf transition
+        n = i
+        while Eaccdata[n] < Eaccdata[n+1]:
+            SF_field_vals.append(Eaccdata[n])
+            SF_Rs_vals.append(Rs[n])
+            SF_T_vals.append(Tdata[n])
+            n += 1
+        SF_field_vals.append(Eaccdata[n])
+        SF_Rs_vals.append(Rs[n])
+        SF_T_vals.append(Tdata[n])
+        break
 
 file_sf = open('sf_data.csv', 'a')
 file_sf.write(file.name)
@@ -342,10 +358,12 @@ for k in range(0, len(SF_field_vals)):
     file_sf.write(str(SF_field_vals[k]))
     file_sf.write(',')
     file_sf.write(str(SF_Rs_vals[k]))
+    file_sf.write(',')
+    file_sf.write(str(SF_T_vals[k]))
     file_sf.write('\n')
 
 file_sf.close()
-"""
+
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
@@ -364,16 +382,30 @@ fmodel = Model(BCS)
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
+fig3, ax3 = plt.subplots(nrows=1, ncols=1)
 
 colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', '0.8' ]
 shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
 
 legend_entries = []
+temps_legend = []
+
+#Values of the total surface resistance for fixed temperatures calculated from the fits
+Rs_fixed_temps = []
+
+#Make a list of lists to store the total surface resistance for fixed temperature values
+#each sub-list corresponds to a different fixed temperature
+for i in range(0,len(fixed_temps)):
+    Rs_fixed_temps.append([])
 
 for i in range(0,len(FieldValues)):
 
     name = str(FieldValues[i]) + " mT"
     legend_entries.append(name)
+
+for i in range(0, len(fixed_temps)):
+    temp_str = str(fixed_temps[i])
+    temps_legend.append(temp_str)
 
 if len(legend_entries) > (len(colors)+len(shapes)):
     print("Warning: This program wasn't expecting more than 19 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
@@ -391,9 +423,30 @@ for i in range(0,len(legend_entries)):
     params_at['f'].vary = False
     params_at['Tc'].vary = False
 
+    #This is where the fits are made
     result_bt = fmodel.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
     result_at = fmodel.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
     #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
+
+    #Get the parameters calculated from the fits for before and after the superfluid transition
+    a0_fit_bt = result_bt.best_values['a0']
+    a0_fit_at = result_at.best_values['a0']
+
+    a1_fit_bt = result_bt.best_values['a1']
+    a1_fit_at = result_at.best_values['a1']
+
+    Rres_fit_bt = result_bt.best_values['Rres']
+    Rres_fit_at = result_at.best_values['Rres']
+
+    #Get the data for the total surface resistance calculated from the fits for
+    #before and after the superfluid transition
+    for j in range(0, len(fixed_temps)):
+
+        if fixed_temps[j] >= 2.175:
+            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_bt,a1_fit_bt,Rres_fit_bt))
+
+        elif fixed_temps[j] < 2.175:
+            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_at,a1_fit_at,Rres_fit_at))
 
     #plot the data points and fit lines
     if i < len(colors):
@@ -415,6 +468,9 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         #ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
+for i in range(0, len(fixed_temps)):
+    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=temps_legend[i])
+
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
 x_locator = FixedLocator([0.1, 1/9, 0.125, 1/7, 1/6, 0.2, 1/4.5, 0.25, 1/3.5, 1/3, 0.4, 1/2.2, 0.5, 1/1.8, 1/1.7])
@@ -435,5 +491,12 @@ ax2.xaxis.set_major_locator(x_locator)
 ax2.set_title(r"Percent Difference between observed R$_s$ and values calculated from fit parameters")
 ax2.legend(title='Field Amplitude')
 ax2.grid(True)
+
+ax3.set_yscale('log')
+ax3.set_xlabel('RF field [mT]')
+ax3.set_ylabel(r'R$_s[n\Omega]$')
+ax3.legend(title='Temperature [K]')
+ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax3.grid(True)
 
 plt.show()
