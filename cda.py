@@ -75,6 +75,10 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
+#Information on which functions to fit to the different RF curves
+fit_funs_bt = ['BCS','BCS','BCS','p2','p2','p2','p2','p2','p2','p2']
+fit_funs_at = ['BCS','BCS','BCS','p4','p3','p2','BCS','p3','p4','p4']
+
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
 #Get the list of accelerating field values
@@ -309,7 +313,7 @@ for i in range(0,len(Eaccdata_at)):
 """---------------------------------------------------------------------------------------
 Get values for the superfluid transition of helium
 ---------------------------------------------------------------------------------------"""
-
+"""
 SF_field_vals = [] #list of rf field values for ramp before and after sf helium transition
 SF_Rs_vals = [] #Corresponding rf field values
 SF_T_vals = []
@@ -363,9 +367,9 @@ for k in range(0, len(SF_field_vals)):
     file_sf.write('\n')
 
 file_sf.close()
-
+"""
 """---------------------------------------------------------------------------------------
-Fit the data to the RBCS formula and plot the results
+Fit the data to the RBCS formula or a polynomial and plot the results
 ---------------------------------------------------------------------------------------"""
 
 #RBCS fit function
@@ -378,7 +382,23 @@ def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
 
     return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
 
+#Second order polynomial fit function
+def Poly2(T, a, b, c):
+    return (a*T*T + b*T + c)
+
+#Third order polynomial fit function
+def Poly3(T, a, b, c, d):
+    return (a*T*T*T + b*T*T + c*T + d)
+
+#Fourth order polynomial fit function
+def Poly4(T, a, b, c, d, e):
+    return (a*T*T*T*T + b*T*T*T + c*T*T + d*T + e)
+
+#Make the models
 fmodel = Model(BCS)
+p2model = Model(Poly2)
+p3model = Model(Poly3)
+p4model = Model(Poly4)
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
@@ -412,41 +432,127 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 
 for i in range(0,len(legend_entries)):
 
-    #Fit each feild amplitude data set to the RBCS formula
+    #Make inital guesses for the residual resistance
     res_min_bt = min(Rs_sep_bt[i])
-    params_bt = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_bt, f=freq, Tc=9.25)
-    params_bt['f'].vary = False
-    params_bt['Tc'].vary = False
-
     res_min_at = min(Rs_sep_at[i])
-    params_at = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_at, f=freq, Tc=9.25)
-    params_at['f'].vary = False
-    params_at['Tc'].vary = False
 
-    #This is where the fits are made
-    result_bt = fmodel.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
-    result_at = fmodel.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
-    #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
+    if fit_funs_bt[i] == 'BCS':
+        #Fit each feild amplitude data set to the RBCS formula
+        params_bt = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_bt, f=freq, Tc=9.25)
+        params_bt['f'].vary = False
+        params_bt['Tc'].vary = False
 
-    #Get the parameters calculated from the fits for before and after the superfluid transition
-    a0_fit_bt = result_bt.best_values['a0']
-    a0_fit_at = result_at.best_values['a0']
+        #fit is made in this line
+        result_bt = fmodel.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
 
-    a1_fit_bt = result_bt.best_values['a1']
-    a1_fit_at = result_at.best_values['a1']
+        #Get the parameters calculated from the fits
+        a0_fit_bt = result_bt.best_values['a0']
+        a1_fit_bt = result_bt.best_values['a1']
+        Rres_fit_bt = result_bt.best_values['Rres']
 
-    Rres_fit_bt = result_bt.best_values['Rres']
-    Rres_fit_at = result_at.best_values['Rres']
+    elif fit_funs_bt[i] == 'p2':
+        params_bt = p2model.make_params(a=2, b=1, c=res_min_bt)
+        result_bt = p2model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_bt = result_bt.best_values['a']
+        b_fit_bt = result_bt.best_values['b']
+        c_fit_bt = result_bt.best_values['c']
+
+    elif fit_funs_bt[i] == 'p3':
+        params_bt = p3model.make_params(a=3, b=2, c=1, d=res_min_bt)
+        result_bt = p3model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_bt = result_bt.best_values['a']
+        b_fit_bt = result_bt.best_values['b']
+        c_fit_bt = result_bt.best_values['c']
+        d_fit_bt = result_bt.best_values['d']
+
+    elif fit_funs_bt[i] == 'p4':
+        params_bt = p4model.make_params(a=4, b=3, c=2, d=1, e=res_min_bt)
+        result_bt = p4model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_bt = result_bt.best_values['a']
+        b_fit_bt = result_bt.best_values['b']
+        c_fit_bt = result_bt.best_values['c']
+        d_fit_bt = result_bt.best_values['d']
+        e_fit_bt = result_bt.best_values['e']
+
+    if fit_funs_at[i] == 'BCS':
+        #Fit each feild amplitude data set to the RBCS formula
+        params_at = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min_at, f=freq, Tc=9.25)
+        params_at['f'].vary = False
+        params_at['Tc'].vary = False
+
+        #fit is made in this line
+        result_at = fmodel.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
+
+        #Get the parameters calculated from the fits
+        a0_fit_at = result_at.best_values['a0']
+        a1_fit_at = result_at.best_values['a1']
+        Rres_fit_at = result_at.best_values['Rres']
+
+    elif fit_funs_at[i] == 'p2':
+        params_at = p2model.make_params(a=2, b=1, c=res_min_at)
+        result_at = p2model.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_at = result_at.best_values['a']
+        b_fit_at = result_at.best_values['b']
+        c_fit_at = result_at.best_values['c']
+
+    elif fit_funs_at[i] == 'p3':
+        params_at = p3model.make_params(a=3, b=2, c=1, d=res_min_at)
+        result_at = p3model.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_at = result_at.best_values['a']
+        b_fit_at = result_at.best_values['b']
+        c_fit_at = result_at.best_values['c']
+        d_fit_at = result_at.best_values['d']
+
+    elif fit_funs_at[i] == 'p4':
+        params_at = p4model.make_params(a=4, b=3, c=2, d=1, e=res_min_at)
+        result_at = p4model.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
+
+        #Get the parameters calculated from the fits
+        a_fit_at = result_at.best_values['a']
+        b_fit_at = result_at.best_values['b']
+        c_fit_at = result_at.best_values['c']
+        d_fit_at = result_at.best_values['d']
+        e_fit_at = result_at.best_values['e']
 
     #Get the data for the total surface resistance calculated from the fits for
     #before and after the superfluid transition
     for j in range(0, len(fixed_temps)):
 
         if fixed_temps[j] >= 2.175:
-            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_bt,a1_fit_bt,Rres_fit_bt))
+            if fit_funs_bt[i] == 'BCS':
+                Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_bt,a1_fit_bt,Rres_fit_bt))
+
+            elif fit_funs_bt[i] == 'p2':
+                Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit_bt, b_fit_bt, c_fit_bt))
+
+            elif fit_funs_bt[i] == 'p3':
+                Rs_fixed_temps[j].append(Poly3(fixed_temps[j], a_fit_bt, b_fit_bt, c_fit_bt, d_fit_bt))
+
+            elif fit_funs_bt[i] == 'p4':
+                Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit_bt, b_fit_bt, c_fit_bt, d_fit_bt, e_fit_bt))
 
         elif fixed_temps[j] < 2.175:
-            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_at,a1_fit_at,Rres_fit_at))
+            if fit_funs_at[i] == 'BCS':
+                Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit_at,a1_fit_at,Rres_fit_at))
+
+            elif fit_funs_at[i] == 'p2':
+                Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit_at, b_fit_at, c_fit_at))
+
+            elif fit_funs_at[i] == 'p3':
+                Rs_fixed_temps[j].append(Poly3(fixed_temps[j], a_fit_at, b_fit_at, c_fit_at, d_fit_at))
+
+            elif fit_funs_at[i] == 'p4':
+                Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit_at, b_fit_at, c_fit_at, d_fit_at, e_fit_at))
 
     #plot the data points and fit lines
     if i < len(colors):
@@ -462,11 +568,11 @@ for i in range(0,len(legend_entries)):
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
-        #ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker=shapes[i-len(colors)], markersize=3, color='black', label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker=shapes[i-len(colors)], markersize=3, color='black', label=legend_entries[i])
     else:
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
-        #ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 for i in range(0, len(fixed_temps)):
     ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=temps_legend[i])
@@ -492,7 +598,7 @@ ax2.set_title(r"Percent Difference between observed R$_s$ and values calculated 
 ax2.legend(title='Field Amplitude')
 ax2.grid(True)
 
-ax3.set_yscale('log')
+#ax3.set_yscale('log')
 ax3.set_xlabel('RF field [mT]')
 ax3.set_ylabel(r'R$_s[n\Omega]$')
 ax3.legend(title='Temperature [K]')
