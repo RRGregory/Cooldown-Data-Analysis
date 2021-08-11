@@ -43,41 +43,74 @@ beta3_all = [2.06107129508082, 2.21325662259346,
     2.19252463157984, 2.1964531414152,
     2.20609678777995, 2.20709554483536]
 
+#Possible geometric factor and frequency values for the six cavities
+G_vals = [37.47, 113.7, 60.39, 120.77, 181.08, 241.24]
+frequencies = [217, 647, 389, 778, 1166, 1555]
+
 #Get file path and name from user
-#file_path = input("Enter the full path and name of your input data file: ")
-file_path = '/Users/ruthgregory/Documents/SRF/Data/before_bake/QWR_217MHz_cooldown_10uT_2019_12_06_08h30_QoData.txt'
+file_path = input("Enter the full path and name of your input data file: ")
 file = open(file_path, "r")
 
-cavity = 2 #Value for gemetric factor, freqeuncy, and determining which betas to use
-freq = 217 #MHz
-Qcol_str = '11'
-Tcol_str = '24'
-Eacccol_str = '9'
-G_str = '120'
-SWR = 1.17926 #Standing wave ratio
+#Get information about the input data table from user
+Qcol_str = input("Enter the column number of your Quality Factor data: ")
+Tcol_str = input("Enter the column number of your temperature data: ")
+Eacccol_str = input("Enter the column number of your accelerating field data: ")
+field_vals_str = input("Enter the approximate target accelerating field values separated by a space: ")
+skiplines_str = input("Optional input: Enter the number of lines to skip at the beginning of the table, or to not skip any lines, press enter: ")
 
-FieldValues = [10,20,30,40,50,60,70]# #field amplitude levels, array input parameter
+msg = (
+    '{sep}'
+    'Enter a number to choose your coaxial cavity: {sep}'
+    '{sep}'
+    'Enter 1 for QWR 217 MHz with G = 37.47 Ohms {sep}'
+    'Enter 2 for QWR 648 MHz with G = 113.7 Ohms {sep}'
+    'Enter 3 for HWR 389 MHz with G = 60.39 Ohms {sep}'
+    'Enter 4 for HWR 778 MHz with G = 120.77 Ohms {sep}'
+    'Enter 5 for HWR 1166 MHz with G = 181.08 Ohms {sep}'
+    'Enter 6 for HWR 1555 MHz with G = 241.24 Ohms'
+    '{sep}').format(sep='\n')
+print(msg)
 
-skiplines = 4 #The default number of lines to skip at the beginning of the table is zero
+in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
+
+fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
+
+#Information on which functions to fit to the different RF curves
+fit_funs_bt = ['BCS','BCS','BCS','p2','p2','p2','p2','p2','p2','p2']
+fit_funs_at = ['BCS','BCS','BCS','p4','p3','p2','BCS','p3','p4','p4']
+
+skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
+
+#Get the list of accelerating field values
+FieldValues = []
+field_vals_list = field_vals_str.split()
+for val in field_vals_list:
+    FieldValues.append(float(val))
+
+#Convert the user input values to ints and get parameters
+if skiplines_str != "":
+    skiplines = int(skiplines_str)
 
 Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
 Eacccol = int(Eacccol_str)
-G = int(G_str)
+cavity = int(in_cavity)
 
 #Subtract 1 because Python indexing starts at 0
 Qcol -= 1
 Tcol -= 1
 Eacccol -= 1
+cavity -= 1
+
+#Get frequency and G factor values
+freq = frequencies[cavity]
+G = G_vals[cavity]
 
 #Create empty lists to hold the data
 Qdata = []
 Tdata = []
 Eaccdata = []
-Rssdata = [] #This will be the non-corrected Rs* data: G/Qo
-
-Rss_err = [] #Uncertainties for Rs* values
-weights = []
+Rssdata = []
 
 """---------------------------------------------------------------------------------------
 Read in the data from the input file
@@ -143,15 +176,14 @@ file.close()
 For each accelerating field ramp up, calculate the feild corrected Rs values
 ---------------------------------------------------------------------------------------"""
 #Get the non-corrected Rs* data
-for i in range(0,len(Qdata)):
-    Rssdata.append(G/Qdata[i])
-    Rss_err.append(Rssdata[i]*(SWR-1)/2)
-    weights.append(1 - Rss_err[i]/Rssdata[i])
+for Q in Qdata:
+    Rssdata.append(G/Q)
 
 ramp_Eacc = []
 ramp_Rss = []
 Rs = [] #Array for corrected Rs data
 
+#Function for doing the Rs* to Rs correction using the beta factors
 def Rs_correction(Bp, Rparam):
     return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
@@ -171,6 +203,7 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
+        #fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -185,6 +218,7 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
         #print(coef)
+        #fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
@@ -198,8 +232,7 @@ for i in range(0,len(Eaccdata)):
         ramp_Rss.append(Rssdata[i])
 
 #print(ramp_Eacc)
-print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
-
+#print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
 """---------------------------------------------------------------------------------------
 Separate the data by different field amplitude values
 ---------------------------------------------------------------------------------------"""
@@ -228,14 +261,17 @@ for i in range(0,len(Eaccdata)):
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
-def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
+def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
+    Step = 0
+    if T < 2.174:
+        Step = 1
 
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
 
-    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
+    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step
 
 fmodel = Model(BCS)
 
@@ -259,12 +295,13 @@ for i in range(0,len(legend_entries)):
 
     #Fit each feild amplitude data set to the RBCS formula
     res_min = min(Rs_sep[i])
-    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, f=freq, Tc=9.25)
+    DeltaRs_guess = 1+i
+    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
     params['f'].vary = False
     params['Tc'].vary = False
 
     result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
-    print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
+    #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
 
     #plot the data points and fit lines
     if i < len(colors):
