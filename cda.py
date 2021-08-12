@@ -76,8 +76,8 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs_bt = ['BCS','BCS','BCS','p2','p2','p2','p2','p2','p2','p2']
-fit_funs_at = ['BCS','BCS','BCS','p4','p3','p2','BCS','p3','p4','p4']
+fit_funs_bt = ['BCS','BCS','BCS','BCS','p3','p3','p2','p2','p2']
+fit_funs_at = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -376,6 +376,9 @@ Fit the data to the RBCS formula or a polynomial and plot the results
 def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
+    Step = 0 #step function for adding DeltaRs to lower temp fits
+    if T < 2.174:
+        Step = 1
 
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
@@ -394,11 +397,15 @@ def Poly3(T, a, b, c, d):
 def Poly4(T, a, b, c, d, e):
     return (a*T*T*T*T + b*T*T*T + c*T*T + d*T + e)
 
+def fixed_T_Poly(B, R0, beta, gamma):
+    return (R0 + beta*B + gamma*B*B)
+
 #Make the models
 fmodel = Model(BCS)
 p2model = Model(Poly2)
 p3model = Model(Poly3)
 p4model = Model(Poly4)
+fixed_T_model = Model(fixed_T_Poly)
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
@@ -575,7 +582,17 @@ for i in range(0,len(legend_entries)):
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 for i in range(0, len(fixed_temps)):
-    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=temps_legend[i])
+
+    R0_guess = min(Rs_fixed_temps[i])
+    params = fixed_T_model.make_params(R0=R0_guess, beta=1, gamma=2)
+    result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
+
+    eq_str = ' Equation of fit line: ' + str(round(result.best_values['R0'],2)) + ' ' + \
+    str(round(result.best_values['beta'],2)) + 'B' + ' + ' + str(round(result.best_values['gamma'],2)) + r'B$^2$'
+
+    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
+    ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
+    #ax3.text(0,0,'hi')
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
