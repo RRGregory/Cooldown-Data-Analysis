@@ -76,8 +76,7 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs_bt = ['BCS','BCS','BCS','p2','p2','p2','p2','p2','p2','p2']
-fit_funs_at = ['BCS','BCS','BCS','p4','p3','p2','BCS','p3','p4','p4']
+fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -261,53 +260,151 @@ for i in range(0,len(Eaccdata)):
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
+
+#RBCS fit function
 def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
-    Step = 0
-    if T < 2.174:
-        Step = 1
+    Step = np.sign(T-2.175)
+
+    try:
+        for i in range(0,len(Step)):
+            if Step[i] == -1:
+                Step[i] = 1
+            elif Step[i] == 1:
+                Step[i] = 0
+
+    except TypeError:
+        if Step == -1:
+            Step = 1
+        elif Step == 1:
+            Step = 0
 
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
 
     return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step
 
+#Second order polynomial fit function
+def Poly2(T, a, b, c):
+    return (a*T*T + b*T + c)
+
+#Third order polynomial fit function
+def Poly3(T, a, b, c, d):
+    return (a*T*T*T + b*T*T + c*T + d)
+
+#Fourth order polynomial fit function
+def Poly4(T, a, b, c, d, e):
+    return (a*T*T*T*T + b*T*T*T + c*T*T + d*T + e)
+
+#Make the models
 fmodel = Model(BCS)
+p2model = Model(Poly2)
+p3model = Model(Poly3)
+p4model = Model(Poly4)
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
+fig3, ax3 = plt.subplots(nrows=1, ncols=1)
 
-colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'b', 'brown', '0.4', '0.8' ]
+colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', '0.8' ]
 shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
 
 legend_entries = []
+temps_legend = []
+
+#Values of the total surface resistance for fixed temperatures calculated from the fits
+Rs_fixed_temps = []
+
+#Make a list of lists to store the total surface resistance for fixed temperature values
+#each sub-list corresponds to a different fixed temperature
+for i in range(0,len(fixed_temps)):
+    Rs_fixed_temps.append([])
 
 for i in range(0,len(FieldValues)):
 
     name = str(FieldValues[i]) + " mT"
     legend_entries.append(name)
 
+for i in range(0, len(fixed_temps)):
+    temp_str = str(fixed_temps[i])
+    temps_legend.append(temp_str)
+
 if len(legend_entries) > (len(colors)+len(shapes)):
-    print("Warning: This program wasn't expecting more than 18 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
+    print("Warning: This program wasn't expecting more than 19 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
 
 for i in range(0,len(legend_entries)):
 
-    #Fit each feild amplitude data set to the RBCS formula
+    #Make inital guesses for the residual resistance
     res_min = min(Rs_sep[i])
-    DeltaRs_guess = 1+i
-    params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
-    params['f'].vary = False
-    params['Tc'].vary = False
+    DeltaRs_guess = i/10
 
-    result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
-    #print(result.best_fit[0], Rs_sep[i][0], "Res calculated: ", (result.best_fit[0] - Rs_sep[i][0]), "res program ", result.residual[0])
+    if fit_funs[i] == 'BCS':
+        #Fit each feild amplitude data set to the RBCS formula
+        params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
+        params['f'].vary = False
+        params['Tc'].vary = False
+
+        #fit is made in this line
+        result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
+
+        #Get the parameters calculated from the fits
+        a0_fit = result.best_values['a0']
+        a1_fit = result.best_values['a1']
+        Rres_fit = result.best_values['Rres']
+        DeltaRs_fit = result.best_values['DeltaRs']
+
+    elif fit_funs[i] == 'p2':
+        params = p2model.make_params(a=2, b=1, c=res_min)
+        result = p2model.fit(Rs_sep[i], params, T=Tdata_sep[i])
+
+        #Get the parameters calculated from the fits
+        a_fit = result.best_values['a']
+        b_fit = result.best_values['b']
+        c_fit = result.best_values['c']
+
+    elif fit_funs[i] == 'p3':
+        params = p3model.make_params(a=3, b=2, c=1, d=res_min)
+        result = p3model.fit(Rs_sep[i], params, T=Tdata_sep[i])
+
+        #Get the parameters calculated from the fits
+        a_fit = result.best_values['a']
+        b_fit = result.best_values['b']
+        c_fit = result.best_values['c']
+        d_fit = result.best_values['d']
+
+    elif fit_funs[i] == 'p4':
+        params = p4model.make_params(a=4, b=3, c=2, d=1, e=res_min)
+        result = p4model.fit(Rs_sep[i], params, T=Tdata_sep[i])
+
+        #Get the parameters calculated from the fits
+        a_fit = result.best_values['a']
+        b_fit = result.best_values['b']
+        c_fit = result.best_values['c']
+        d_fit = result.best_values['d']
+        e_fit = result.best_values['e']
+
+    #Get the data for the total surface resistance calculated from the fits 
+    for j in range(0, len(fixed_temps)):
+
+        if fit_funs[i] == 'BCS':
+            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+
+        elif fit_funs[i] == 'p2':
+            Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit, b_fit, c_fit))
+
+        elif fit_funs[i] == 'p3':
+            Rs_fixed_temps[j].append(Poly3(fixed_temps[j], a_fit, b_fit, c_fit, d_fit))
+
+        elif fit_funs[i] == 'p4':
+            Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit, b_fit, c_fit, d_fit, e_fit))
 
     #plot the data points and fit lines
     if i < len(colors):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
@@ -317,6 +414,8 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
+for i in range(0, len(fixed_temps)):
+    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=temps_legend[i])
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
@@ -338,5 +437,12 @@ ax2.xaxis.set_major_locator(x_locator)
 ax2.set_title(r"Percent Difference between observed R$_s$ and values calculated from fit parameters")
 ax2.legend(title='Field Amplitude')
 ax2.grid(True)
+
+#ax3.set_yscale('log')
+ax3.set_xlabel('RF field [mT]')
+ax3.set_ylabel(r'R$_s[n\Omega]$')
+ax3.legend(title='Temperature [K]')
+ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax3.grid(True)
 
 plt.show()
