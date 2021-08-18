@@ -76,7 +76,7 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
+fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -118,7 +118,7 @@ Read in the data from the input file
 line_cnt = 1 #line count, it will start with line 1
 for line in file:
 
-    if line_cnt <= skiplines: #skip the indecated number of lines at the beginning
+    if line_cnt <= skiplines: #skip the indicated number of lines at the beginning
         line_cnt += 1
         continue
 
@@ -239,11 +239,15 @@ Separate the data by different field amplitude values
 Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
 Tdata_sep = [] #list of listst for temperature data separated by field amplitude
 Rs_sep = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude
+Rs_sep_log = [] #list of lists for the logarithm of the surface resistance data in nano-ohms separated by field amplitude
+Rs_sep_ln = [] #list of lists for the natural logarithm of the surface resistance data in nano-ohms separated by field amplitude
 
 for value in FieldValues:
     Inv_Tdata_sep.append([])
     Tdata_sep.append([])
     Rs_sep.append([])
+    Rs_sep_log.append([])
+    Rs_sep_ln.append([])
 
 #Make two lists containing lists of the inverse temperature data and the
 #corrected surface resistance data. Each sub-list corresponds to a different
@@ -256,11 +260,12 @@ for i in range(0,len(Eaccdata)):
             Inv_Tdata_sep[j].append(1/Tdata[i])
             Tdata_sep[j].append(Tdata[i])
             Rs_sep[j].append(Rs[i]*(10**9))
+            Rs_sep_log[j].append(np.log10(Rs[i]*(10**9)))
+            Rs_sep_ln[j].append(np.log(Rs[i]*(10**9)))
 
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
-
 #RBCS fit function
 def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
@@ -285,6 +290,12 @@ def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
 
     return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step
 
+def Plotting_BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
+    y_vals = []
+    for i in T:
+        y_vals.append(BCS(i, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25))
+    return y_vals
+
 #Second order polynomial fit function
 def Poly2(T, a, b, c):
     return (a*T*T + b*T + c)
@@ -297,11 +308,15 @@ def Poly3(T, a, b, c, d):
 def Poly4(T, a, b, c, d, e):
     return (a*T*T*T*T + b*T*T*T + c*T*T + d*T + e)
 
+def fixed_T_Poly(B, alpha, beta, gamma):
+    return (alpha + beta*B + gamma*B*B)
+
 #Make the models
 fmodel = Model(BCS)
 p2model = Model(Poly2)
 p3model = Model(Poly3)
 p4model = Model(Poly4)
+fixed_T_model = Model(fixed_T_Poly)
 
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
@@ -316,6 +331,11 @@ temps_legend = []
 #Values of the total surface resistance for fixed temperatures calculated from the fits
 Rs_fixed_temps = []
 
+#Temperature values for the fit plotting
+T_vals = np.linspace(1.9, 4.5, 50)
+Inv_T_vals = np.linspace(1/1.9, 1/4.5, 50)
+Rs_for_T_vals = []
+
 #Make a list of lists to store the total surface resistance for fixed temperature values
 #each sub-list corresponds to a different fixed temperature
 for i in range(0,len(fixed_temps)):
@@ -325,6 +345,8 @@ for i in range(0,len(FieldValues)):
 
     name = str(FieldValues[i]) + " mT"
     legend_entries.append(name)
+
+    Rs_for_T_vals.append([])
 
 for i in range(0, len(fixed_temps)):
     temp_str = str(fixed_temps[i])
@@ -336,7 +358,7 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 for i in range(0,len(legend_entries)):
 
     #Make inital guesses for the residual resistance
-    res_min = min(Rs_sep[i])
+    res_min = min(Rs_sep_log[i])
     DeltaRs_guess = i/10
 
     if fit_funs[i] == 'BCS':
@@ -353,6 +375,8 @@ for i in range(0,len(legend_entries)):
         a1_fit = result.best_values['a1']
         Rres_fit = result.best_values['Rres']
         DeltaRs_fit = result.best_values['DeltaRs']
+        #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
+        print(round(-1*DeltaRs_fit,4))
 
     elif fit_funs[i] == 'p2':
         params = p2model.make_params(a=2, b=1, c=res_min)
@@ -384,11 +408,12 @@ for i in range(0,len(legend_entries)):
         d_fit = result.best_values['d']
         e_fit = result.best_values['e']
 
-    #Get the data for the total surface resistance calculated from the fits 
+    #Get the data for the total surface resistance calculated from the fits
     for j in range(0, len(fixed_temps)):
 
         if fit_funs[i] == 'BCS':
             Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+            #print(round(Rres_fit,4))
 
         elif fit_funs[i] == 'p2':
             Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit, b_fit, c_fit))
@@ -399,10 +424,17 @@ for i in range(0,len(legend_entries)):
         elif fit_funs[i] == 'p4':
             Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit, b_fit, c_fit, d_fit, e_fit))
 
+    for k in range(0, len(T_vals)):
+
+        Rs_for_T_vals[i].append(BCS(T_vals[k], a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+
     #plot the data points and fit lines
     if i < len(colors):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
+        #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
+        #print(Inv_Tdata_sep[i], Inv_T_vals)
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
 
     elif i < (len(colors)+len(shapes)):
@@ -415,7 +447,24 @@ for i in range(0,len(legend_entries)):
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 for i in range(0, len(fixed_temps)):
-    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=temps_legend[i])
+
+    params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
+    result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
+
+    str_beta_sign = '-'
+    if result.best_values['beta'] >= 0:
+        str_beta_sign = '+'
+
+    str_gamma_sign = '-'
+    if result.best_values['gamma'] >= 0:
+        str_gamma_sign = '+'
+
+    eq_str = ' Equation of fit line: ' + str(round(result.best_values['alpha'],2)) + ' ' +  str_beta_sign + ' ' +\
+    str(abs(round(result.best_values['beta'],3))) + 'B' + ' ' + str_gamma_sign + ' ' + \
+    str(abs(round(result.best_values['gamma'],4))) + r'B$^2$'
+
+    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
+    ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
