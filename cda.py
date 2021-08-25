@@ -76,7 +76,7 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs_bt = ['BCS','BCS','BCS','BCS','p3','p3','p2','p2','p2']
+fit_funs_bt = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 fit_funs_at = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
@@ -376,9 +376,6 @@ Fit the data to the RBCS formula or a polynomial and plot the results
 def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
-    Step = 0 #step function for adding DeltaRs to lower temp fits
-    if T < 2.174:
-        Step = 1
 
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
@@ -456,6 +453,7 @@ for i in range(0,len(legend_entries)):
         a0_fit_bt = result_bt.best_values['a0']
         a1_fit_bt = result_bt.best_values['a1']
         Rres_fit_bt = result_bt.best_values['Rres']
+        lamb_bt = BCS(2.175,a0_fit_bt, a1_fit_bt, Rres_fit_bt)
 
     elif fit_funs_bt[i] == 'p2':
         params_bt = p2model.make_params(a=2, b=1, c=res_min_bt)
@@ -465,6 +463,7 @@ for i in range(0,len(legend_entries)):
         a_fit_bt = result_bt.best_values['a']
         b_fit_bt = result_bt.best_values['b']
         c_fit_bt = result_bt.best_values['c']
+        lamb_bt = Poly2(2.175, a_fit_bt, b_fit_bt, c_fit_bt)
 
     elif fit_funs_bt[i] == 'p3':
         params_bt = p3model.make_params(a=3, b=2, c=1, d=res_min_bt)
@@ -475,6 +474,7 @@ for i in range(0,len(legend_entries)):
         b_fit_bt = result_bt.best_values['b']
         c_fit_bt = result_bt.best_values['c']
         d_fit_bt = result_bt.best_values['d']
+        lamb_bt = Poly3(2.175, a_fit_bt, b_fit_bt, c_fit_bt, d_fit_bt)
 
     elif fit_funs_bt[i] == 'p4':
         params_bt = p4model.make_params(a=4, b=3, c=2, d=1, e=res_min_bt)
@@ -500,6 +500,7 @@ for i in range(0,len(legend_entries)):
         a0_fit_at = result_at.best_values['a0']
         a1_fit_at = result_at.best_values['a1']
         Rres_fit_at = result_at.best_values['Rres']
+        lamb_at = BCS(2.175, a0_fit_at, a1_fit_at, Rres_fit_at)
 
     elif fit_funs_at[i] == 'p2':
         params_at = p2model.make_params(a=2, b=1, c=res_min_at)
@@ -509,6 +510,7 @@ for i in range(0,len(legend_entries)):
         a_fit_at = result_at.best_values['a']
         b_fit_at = result_at.best_values['b']
         c_fit_at = result_at.best_values['c']
+        lamb_at = Poly2(2.175, a_fit_at, b_fit_at, c_fit_at)
 
     elif fit_funs_at[i] == 'p3':
         params_at = p3model.make_params(a=3, b=2, c=1, d=res_min_at)
@@ -519,6 +521,7 @@ for i in range(0,len(legend_entries)):
         b_fit_at = result_at.best_values['b']
         c_fit_at = result_at.best_values['c']
         d_fit_at = result_at.best_values['d']
+        lamb_at = Poly3(2.175, a_fit_at, b_fit_at, c_fit_at, d_fit_at)
 
     elif fit_funs_at[i] == 'p4':
         params_at = p4model.make_params(a=4, b=3, c=2, d=1, e=res_min_at)
@@ -580,6 +583,8 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
+
+    print(round(lamb_bt,4), ",", round(lamb_at,4))
 
 for i in range(0, len(fixed_temps)):
 
