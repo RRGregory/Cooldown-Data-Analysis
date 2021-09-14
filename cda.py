@@ -76,7 +76,7 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
+fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -358,8 +358,8 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 for i in range(0,len(legend_entries)):
 
     #Make inital guesses for the residual resistance
-    res_min = min(Rs_sep_log[i])
-    DeltaRs_guess = i/10
+    res_min = min(Rs_sep_ln[i])
+    DeltaRs_guess = np.log(0.01 + i/10)
 
     if fit_funs[i] == 'BCS':
         #Fit each feild amplitude data set to the RBCS formula
@@ -368,7 +368,7 @@ for i in range(0,len(legend_entries)):
         params['Tc'].vary = False
 
         #fit is made in this line
-        result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
+        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i])
 
         #Get the parameters calculated from the fits
         a0_fit = result.best_values['a0']
@@ -376,7 +376,7 @@ for i in range(0,len(legend_entries)):
         Rres_fit = result.best_values['Rres']
         DeltaRs_fit = result.best_values['DeltaRs']
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
-        print(round(-1*DeltaRs_fit,4))
+        print(round(np.exp(-1*DeltaRs_fit),4))
 
     elif fit_funs[i] == 'p2':
         params = p2model.make_params(a=2, b=1, c=res_min)
@@ -430,12 +430,12 @@ for i in range(0,len(legend_entries)):
 
     #plot the data points and fit lines
     if i < len(colors):
-        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i],np.exp(Rs_sep_ln[i]), marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep[i], np.exp(result.best_fit), marker='None', linestyle='--',color=colors[i])
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
         #print(Inv_Tdata_sep[i], Inv_T_vals)
-        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep_ln[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
 
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
