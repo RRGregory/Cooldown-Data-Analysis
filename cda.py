@@ -355,6 +355,11 @@ for i in range(0, len(fixed_temps)):
 if len(legend_entries) > (len(colors)+len(shapes)):
     print("Warning: This program wasn't expecting more than 19 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
 
+
+file_fit_params = open('fit_params.txt', 'w')
+#file_fit_params.write("a0 , a1 , Rres")
+#file_fit_params.write('\n')
+
 for i in range(0,len(legend_entries)):
 
     #Make inital guesses for the residual resistance
@@ -376,7 +381,24 @@ for i in range(0,len(legend_entries)):
         Rres_fit = result.best_values['Rres']
         DeltaRs_fit = result.best_values['DeltaRs']
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
-        print(round(np.exp(-1*DeltaRs_fit),4))
+        #print(round(np.exp(-1*DeltaRs_fit),4))
+
+        #print(result.fit_report())
+
+        #file_fit_params.write(str(a0_fit))
+        #file_fit_params.write(',')
+        #file_fit_params.write(str(a1_fit))
+        #file_fit_params.write(',')
+        #file_fit_params.write(str(Rres_fit))
+        #file_fit_params.write('\n')
+
+        file_fit_params.write('Bp: ')
+        file_fit_params.write(str(legend_entries[i]))
+        file_fit_params.write(" [mT]")
+        file_fit_params.write('\n')
+        file_fit_params.write(result.fit_report())
+        file_fit_params.write('\n')
+        file_fit_params.write('\n')
 
     elif fit_funs[i] == 'p2':
         params = p2model.make_params(a=2, b=1, c=res_min)
@@ -445,6 +467,8 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color='black', label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
+
+file_fit_params.close()
 
 for i in range(0, len(fixed_temps)):
 
