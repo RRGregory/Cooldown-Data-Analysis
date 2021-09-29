@@ -343,6 +343,9 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 
 
 file_fit_params = open('fit_params.txt', 'w')
+file_Rres = open('Rres.txt', 'a')
+file_Rres.write(file_path)
+file_Rres.write('\n')
 #file_fit_params.write("a0 , a1 , Rres")
 #file_fit_params.write('\n')
 
@@ -368,7 +371,8 @@ for i in range(0,len(legend_entries)):
         #print(a0_fit, a1_fit, Rres_fit)
 
         #print(result.fit_report())
-
+        file_Rres.write(str(Rres_fit))
+        file_Rres.write('\n')
         #file_fit_params.write(str(a0_fit))
         #file_fit_params.write(',')
         #file_fit_params.write(str(a1_fit))
@@ -453,6 +457,7 @@ for i in range(0,len(legend_entries)):
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 file_fit_params.close()
+file_Rres.close()
 
 for i in range(0, len(fixed_temps)):
 
@@ -483,6 +488,7 @@ ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
 ax1.set_ylabel(r'R$_s[n\Omega]$')
 ax1.xaxis.set_major_formatter(x_formatter)
 ax1.xaxis.set_major_locator(x_locator)
+ax1.vlines(x=0.45977, ymin=0, ymax=200, color='gray', linestyle='dashed', label = 'lambda point')
 ax1.legend(title='Field Amplitude')
 ax1.set_title("Surface Resistance vs Inverse Temperature")
 ax1.grid(True)
