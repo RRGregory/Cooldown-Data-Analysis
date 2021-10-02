@@ -34,6 +34,18 @@ The coefficients of this polynomial are extracted and stored in an array. Finall
 
 These corrected Rs values are then stored in a list with the same indexing as the other lists.
 
-## Other notes and possible future improvements
+## Uncertainties
 
+The uncertainties in the peak field (Bp) are:  <img src="https://render.githubusercontent.com/render/math?math=\deltaB_p = \frac{B_p(SWR-1)}{4}">
+
+The uncertainties in the non-corrected surface resistance (Rs*) are:  <img src="https://render.githubusercontent.com/render/math?math=\deltaR_s^* = \frac{R_s^*(SWR-1)}{2}">
+
+The uncertainties in the field corrected Rs values are given by 
+![image](https://user-images.githubusercontent.com/19824886/135696597-99a407ae-4eef-4388-9319-d93a5f42ed62.png)
+
+where in this code the  <img src="https://render.githubusercontent.com/render/math?math=\alpha_i"> values are just 0,1,2,3. 
+
+The fitting described above is done with a least squares polynomial fit. The uncertainty in the fit parameters(  <img src="https://render.githubusercontent.com/render/math?math=r_{\alphai}"> ) was obtained from the diagonal of the covariance matrix as described in this paper: https://ipnpr.jpl.nasa.gov/progress_report/42-122/122E.pdf 
+
+## Other notes and possible future improvements
 - An unresolved issue is that sometimes the input data does not have all strictly increasing field amplitude values for each ramp up. For example the experimenters might be trying to take a measurement at 30 MV/m, overshoot and go to 33 MV/m, and then go back and take a data point at 30 MV/m. Then the data column for accelerating field data would have the series 10,20,33,30,40,50,60,70. Since the script looks for increasing values (within 0.5 mT) when it splits the data into ramp-ups, these would be split as [10,20,33] and [30,40,50,60,70], leading to less than ideal polyfits when doing the Rs* to Rs conversions described above. If you see the warning "sys:1: RankWarning: Polyfit may be poorly conditioned" when you run the script, this is probably what happened.
