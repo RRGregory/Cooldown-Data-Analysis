@@ -94,6 +94,7 @@ Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
 Eacccol = int(Eacccol_str)
 cavity = int(in_cavity)
+SWR = 1.114233
 
 #Subtract 1 because Python indexing starts at 0
 Qcol -= 1
@@ -110,6 +111,10 @@ Qdata = []
 Tdata = []
 Eaccdata = []
 Rssdata = []
+
+Bp_err = []
+Rss_err = []
+weights = []
 
 """---------------------------------------------------------------------------------------
 Read in the data from the input file
@@ -175,16 +180,39 @@ file.close()
 For each accelerating field ramp up, calculate the feild corrected Rs values
 ---------------------------------------------------------------------------------------"""
 #Get the non-corrected Rs* data
-for Q in Qdata:
-    Rssdata.append(G/Q)
+for i in range(0,len(Qdata)):
+    Rssdata.append((G/Qdata[i])*10**9)
+    Bp_err.append(Eaccdata[i]*(SWR-1)/4)
+    Rss_err.append(Rssdata[i]*(SWR-1)/2)
+    weights.append(1 - (Rss_err[i]/Rssdata[i]))
 
 ramp_Eacc = []
 ramp_Rss = []
+ramp_weights = []
+
 Rs = [] #Array for corrected Rs data
+Rs_err = [] #Array for uncertainties in corrected Rs data
 
 #Function for doing the Rs* to Rs correction using the beta factors
 def Rs_correction(Bp, Rparam):
     return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
+
+def Delta_Rs(Bp,Rparam,delta_Rparam,delta_Bp):
+
+    dRs_squared = 0
+    beta_vals = [beta3_all[cavity], beta2_all[cavity], beta1_all[cavity], beta0_all[cavity]]
+    alpha_i_powers = [3,2,1,0]
+
+    for i in range(0,len(Rparam)):
+
+        Rs_val = beta_vals[i]*Rparam[i]*Bp**(alpha_i_powers[i])
+        sqrt_val = (delta_Rparam[i]/Rparam[i])**2 + (alpha_i_powers[i]*delta_Bp/Bp)**2
+
+        dRs_squared += (Rs_val*np.sqrt(sqrt_val))**2
+
+    dRs = np.sqrt(dRs_squared)
+
+    return dRs
 
 #This loop gets the corrected Rs data and puts it in Rs
 for i in range(0,len(Eaccdata)):
@@ -192,46 +220,68 @@ for i in range(0,len(Eaccdata)):
     if i == 0:
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
+        ramp_weights.append(weights[i])
         continue
 
     if i == (len(Eaccdata)-1): #if you have reached the last data point
 
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
+        ramp_weights.append(weights[i])
 
         #Do the fit here
-        coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
+        coef,cov = np.polyfit(ramp_Eacc,ramp_Rss,3, w=ramp_weights, cov=True) #3rd degree polynomial
         #print(coef)
         #fit = np.poly1d(coef)
         #print(fit)
 
         for j in range(0,len(ramp_Rss)):
             Rs.append(Rs_correction(ramp_Eacc[j], coef))
+
+            Rparam_err = np.sqrt(np.diag(cov))
+
+            Bp_err = ramp_Eacc[j]*(SWR-1)/4
+
+            Rs_err.append(Delta_Rs(ramp_Eacc[j], coef, Rparam_err, Bp_err))
         #print("last ramp", ramp_Eacc[0])
 
-    if Eaccdata[i-1] < Eaccdata[i]:
+    if Eaccdata[i-1] < (Eaccdata[i] + 0.5):
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
+        ramp_weights.append(weights[i])
     else:
 
         #Do the fit here
-        coef = np.polyfit(ramp_Eacc,ramp_Rss,3) #3rd degree polynomial
-        #print(coef)
-        #fit = np.poly1d(coef)
-        #print(fit)
+        #print(len(ramp_Eacc),Eaccdata[i])
+        try:
+            coef,cov = np.polyfit(ramp_Eacc,ramp_Rss,3, w=ramp_weights, cov=True) #3rd degree polynomial
+            #print(coef)
+            #fit = np.poly1d(coef)
+            #print(fit)
+        except ValueError:
+            continue
 
         for j in range(0,len(ramp_Rss)):
             Rs.append(Rs_correction(ramp_Eacc[j], coef))
+
+            Rparam_err = np.sqrt(np.diag(cov))
+
+            Bp_err = ramp_Eacc[j]*(SWR-1)/4
+
+            Rs_err.append(Delta_Rs(ramp_Eacc[j], coef, Rparam_err, Bp_err))
         #print("some ramp", ramp_Eacc[0])
 
         #Get ready to start the next ramp up fit
         ramp_Eacc.clear()
         ramp_Rss.clear()
+        ramp_weights.clear()
         ramp_Eacc.append(Eaccdata[i])
         ramp_Rss.append(Rssdata[i])
+        ramp_weights.append(weights[i])
 
+#print(Rs_err)
 #print(ramp_Eacc)
-#print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs))
+#print(len(Tdata), len(Rssdata), len(Eaccdata), len(Rs), len(Rs_err))
 """---------------------------------------------------------------------------------------
 Separate the data by different field amplitude values
 ---------------------------------------------------------------------------------------"""
@@ -239,15 +289,19 @@ Separate the data by different field amplitude values
 Inv_Tdata_sep = [] #list of lists for inverse temperature data separated by field amplitude
 Tdata_sep = [] #list of listst for temperature data separated by field amplitude
 Rs_sep = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude
+Rs_err_sep = []
 Rs_sep_log = [] #list of lists for the logarithm of the surface resistance data in nano-ohms separated by field amplitude
 Rs_sep_ln = [] #list of lists for the natural logarithm of the surface resistance data in nano-ohms separated by field amplitude
+weights_sep = []
 
 for value in FieldValues:
     Inv_Tdata_sep.append([])
     Tdata_sep.append([])
     Rs_sep.append([])
+    Rs_err_sep.append([])
     Rs_sep_log.append([])
     Rs_sep_ln.append([])
+    weights_sep.append([])
 
 #Make two lists containing lists of the inverse temperature data and the
 #corrected surface resistance data. Each sub-list corresponds to a different
@@ -259,9 +313,11 @@ for i in range(0,len(Eaccdata)):
         if (Eaccdata[i] < FieldValues[j]+0.5) and (Eaccdata[i] > FieldValues[j]-0.5):
             Inv_Tdata_sep[j].append(1/Tdata[i])
             Tdata_sep[j].append(Tdata[i])
-            Rs_sep[j].append(Rs[i]*(10**9))
-            Rs_sep_log[j].append(np.log10(Rs[i]*(10**9)))
-            Rs_sep_ln[j].append(np.log(Rs[i]*(10**9)))
+            Rs_sep[j].append(Rs[i])
+            Rs_err_sep[j].append(Rs_err[i])
+            Rs_sep_log[j].append(np.log10(Rs[i]))
+            Rs_sep_ln[j].append(np.log(Rs[i]))
+            weights_sep[j].append(weights[i])
 
 """---------------------------------------------------------------------------------------
 Fit the data to the RBCS formula and plot the results
@@ -373,7 +429,7 @@ for i in range(0,len(legend_entries)):
         params['Tc'].vary = False
 
         #fit is made in this line
-        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i])
+        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], weights=weights_sep[i])
 
         #Get the parameters calculated from the fits
         a0_fit = result.best_values['a0']
@@ -452,7 +508,7 @@ for i in range(0,len(legend_entries)):
 
     #plot the data points and fit lines
     if i < len(colors):
-        ax1.plot(Inv_Tdata_sep[i],np.exp(Rs_sep_ln[i]), marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.errorbar(Inv_Tdata_sep[i],Rs_sep[i], yerr=Rs_err_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
         ax1.plot(Inv_Tdata_sep[i], np.exp(result.best_fit), marker='None', linestyle='--',color=colors[i])
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
