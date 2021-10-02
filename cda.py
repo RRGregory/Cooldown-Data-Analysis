@@ -76,8 +76,8 @@ in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and d
 fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs_bt = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
-fit_funs_at = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
+fit_funs_bt = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
+fit_funs_at = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -455,6 +455,9 @@ for i in range(0,len(legend_entries)):
         Rres_fit_bt = result_bt.best_values['Rres']
         lamb_bt = BCS(2.175,a0_fit_bt, a1_fit_bt, Rres_fit_bt)
 
+        print("Before transition fit parameters:")
+        print('a0: ', round(a0_fit_bt,4), 'a1: ', round(a1_fit_bt,4), 'Rres: ', round(Rres_fit_bt,4))
+
     elif fit_funs_bt[i] == 'p2':
         params_bt = p2model.make_params(a=2, b=1, c=res_min_bt)
         result_bt = p2model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
@@ -501,6 +504,10 @@ for i in range(0,len(legend_entries)):
         a1_fit_at = result_at.best_values['a1']
         Rres_fit_at = result_at.best_values['Rres']
         lamb_at = BCS(2.175, a0_fit_at, a1_fit_at, Rres_fit_at)
+
+        print()
+        print("After transition fit parameters:")
+        print('a0: ', round(a0_fit_at,4), 'a1: ', round(a1_fit_at,4), 'Rres: ', round(Rres_fit_at,4))
 
     elif fit_funs_at[i] == 'p2':
         params_at = p2model.make_params(a=2, b=1, c=res_min_at)
@@ -584,7 +591,7 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
-    print(round(lamb_bt,4), ",", round(lamb_at,4))
+    #print(round(lamb_bt,4), ",", round(lamb_at,4))
 
 for i in range(0, len(fixed_temps)):
 
