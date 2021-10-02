@@ -267,33 +267,19 @@ for i in range(0,len(Eaccdata)):
 Fit the data to the RBCS formula and plot the results
 ---------------------------------------------------------------------------------------"""
 #RBCS fit function
-def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
+def BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
     hbar = 6.582119569*10**(-16)
-    Step = np.sign(T-2.175)
-
-    try:
-        for i in range(0,len(Step)):
-            if Step[i] == -1:
-                Step[i] = 1
-            elif Step[i] == 1:
-                Step[i] = 0
-
-    except TypeError:
-        if Step == -1:
-            Step = 1
-        elif Step == 1:
-            Step = 0
 
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
 
-    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step
+    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres
 
-def Plotting_BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
+def Plotting_BCS(T, a0, a1, Rres, f=freq, Tc=9.25):
     y_vals = []
     for i in T:
-        y_vals.append(BCS(i, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25))
+        y_vals.append(BCS(i, a0, a1, Rres, f=freq, Tc=9.25))
     return y_vals
 
 #Second order polynomial fit function
@@ -357,34 +343,36 @@ if len(legend_entries) > (len(colors)+len(shapes)):
 
 
 file_fit_params = open('fit_params.txt', 'w')
+file_Rres = open('Rres.txt', 'a')
+file_Rres.write(file_path)
+file_Rres.write('\n')
 #file_fit_params.write("a0 , a1 , Rres")
 #file_fit_params.write('\n')
 
 for i in range(0,len(legend_entries)):
 
     #Make inital guesses for the residual resistance
-    res_min = min(Rs_sep_ln[i])
-    DeltaRs_guess = np.log(0.01 + i/10)
+    res_min = min(Rs_sep[i])
 
     if fit_funs[i] == 'BCS':
         #Fit each feild amplitude data set to the RBCS formula
-        params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
+        params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, f=freq, Tc=9.25)
         params['f'].vary = False
         params['Tc'].vary = False
 
         #fit is made in this line
-        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i])
+        result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
 
         #Get the parameters calculated from the fits
         a0_fit = result.best_values['a0']
         a1_fit = result.best_values['a1']
         Rres_fit = result.best_values['Rres']
-        DeltaRs_fit = result.best_values['DeltaRs']
-        #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
-        #print(round(np.exp(-1*DeltaRs_fit),4))
+
+        #print(a0_fit, a1_fit, Rres_fit)
 
         #print(result.fit_report())
-
+        file_Rres.write(str(Rres_fit))
+        file_Rres.write('\n')
         #file_fit_params.write(str(a0_fit))
         #file_fit_params.write(',')
         #file_fit_params.write(str(a1_fit))
@@ -434,7 +422,7 @@ for i in range(0,len(legend_entries)):
     for j in range(0, len(fixed_temps)):
 
         if fit_funs[i] == 'BCS':
-            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit))
             #print(round(Rres_fit,4))
 
         elif fit_funs[i] == 'p2':
@@ -448,16 +436,16 @@ for i in range(0,len(legend_entries)):
 
     for k in range(0, len(T_vals)):
 
-        Rs_for_T_vals[i].append(BCS(T_vals[k], a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+        Rs_for_T_vals[i].append(BCS(T_vals[k], a0_fit,a1_fit,Rres_fit))
 
     #plot the data points and fit lines
     if i < len(colors):
-        ax1.plot(Inv_Tdata_sep[i],np.exp(Rs_sep_ln[i]), marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep[i], np.exp(result.best_fit), marker='None', linestyle='--',color=colors[i])
-        #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
+        ax1.plot(Inv_Tdata_sep[i],result.best_fit, marker='None', linestyle='--',color=colors[i])
+        #print(a0_fit, a1_fit, Rres_fit)
         #print(Inv_Tdata_sep[i], Inv_T_vals)
-        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep_ln[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
 
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
@@ -469,6 +457,7 @@ for i in range(0,len(legend_entries)):
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
 file_fit_params.close()
+file_Rres.close()
 
 for i in range(0, len(fixed_temps)):
 
