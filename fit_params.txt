@@ -3,214 +3,268 @@ Bp: 10.0 mT [mT]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 42
-    # data points      = 31
+    # function evals   = 31
+    # data points      = 14
     # variables        = 4
-    chi-square         = 0.01290693
-    reduced chi-square = 4.7803e-04
-    Akaike info crit   = -233.303318
-    Bayesian info crit = -227.567370
+    chi-square         = 4.9710e-04
+    reduced chi-square = 4.9710e-05
+    Akaike info crit   = -135.440930
+    Bayesian info crit = -132.884700
 [[Variables]]
-    a0:       1.4983e-08 +/- 7.1728e-10 (4.79%) (init = 0.001)
-    a1:       1.18687343 +/- 0.02822479 (2.38%) (init = 1.5)
-    Rres:     3.20407205 +/- 0.02992404 (0.93%) (init = 3.325946)
-    DeltaRs:  0.03898120 +/- 0.02014179 (51.67%) (init = -4.60517)
-    f:        647 (fixed)
+    a0:       2.1520e-08 +/- 5.3115e-09 (24.68%) (init = 0.001)
+    a1:       1.35035092 +/- 0.09248434 (6.85%) (init = 1.5)
+    Rres:     2.44390405 +/- 0.03397679 (1.39%) (init = 2.591573)
+    DeltaRs:  0.00332434 +/- 0.00827004 (248.77%) (init = -4.60517)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.980
-    C(Rres, DeltaRs) = -0.919
-    C(a1, Rres)      =  0.916
-    C(a0, Rres)      =  0.827
-    C(a1, DeltaRs)   = -0.769
-    C(a0, DeltaRs)   = -0.660
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.978
+    C(a0, Rres)      =  0.964
+    C(Rres, DeltaRs) = -0.832
+    C(a1, DeltaRs)   = -0.732
+    C(a0, DeltaRs)   = -0.701
 
 Bp: 20.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 42
-    # data points      = 32
+    # function evals   = 38
+    # data points      = 14
     # variables        = 4
-    chi-square         = 0.01856801
-    reduced chi-square = 6.6314e-04
-    Akaike info crit   = -230.465635
-    Bayesian info crit = -224.602692
+    chi-square         = 2.9085e-04
+    reduced chi-square = 2.9085e-05
+    Akaike info crit   = -142.944824
+    Bayesian info crit = -140.388595
 [[Variables]]
-    a0:       1.6126e-08 +/- 8.9970e-10 (5.58%) (init = 0.001)
-    a1:       1.21186791 +/- 0.03219289 (2.66%) (init = 1.5)
-    Rres:     3.33397489 +/- 0.03301473 (0.99%) (init = 3.455668)
-    DeltaRs:  0.03786603 +/- 0.02237222 (59.08%) (init = -2.207275)
-    f:        647 (fixed)
+    a0:       1.8746e-08 +/- 3.2426e-09 (17.30%) (init = 0.001)
+    a1:       1.27670432 +/- 0.06581511 (5.16%) (init = 1.5)
+    Rres:     2.49526426 +/- 0.02883650 (1.16%) (init = 2.678375)
+    DeltaRs:  0.00793849 +/- 0.00629697 (79.32%) (init = -2.207275)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.981
-    C(Rres, DeltaRs) = -0.916
-    C(a1, Rres)      =  0.909
-    C(a0, Rres)      =  0.820
-    C(a1, DeltaRs)   = -0.753
-    C(a0, DeltaRs)   = -0.645
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.980
+    C(a0, Rres)      =  0.966
+    C(Rres, DeltaRs) = -0.823
+    C(a1, DeltaRs)   = -0.726
+    C(a0, DeltaRs)   = -0.693
 
 Bp: 30.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 42
-    # data points      = 31
+    # function evals   = 32
+    # data points      = 14
     # variables        = 4
-    chi-square         = 0.02108778
-    reduced chi-square = 7.8103e-04
-    Akaike info crit   = -218.084516
-    Bayesian info crit = -212.348567
+    chi-square         = 5.0192e-04
+    reduced chi-square = 5.0192e-05
+    Akaike info crit   = -135.305848
+    Bayesian info crit = -132.749619
 [[Variables]]
-    a0:       1.7712e-08 +/- 1.0735e-09 (6.06%) (init = 0.001)
-    a1:       1.22954839 +/- 0.03538250 (2.88%) (init = 1.5)
-    Rres:     3.42125021 +/- 0.03930448 (1.15%) (init = 3.520592)
-    DeltaRs:  0.01351199 +/- 0.02714448 (200.89%) (init = -1.560648)
-    f:        647 (fixed)
+    a0:       2.1980e-08 +/- 4.7058e-09 (21.41%) (init = 0.001)
+    a1:       1.30403483 +/- 0.08046803 (6.17%) (init = 1.5)
+    Rres:     2.53789676 +/- 0.03609492 (1.42%) (init = 2.718884)
+    DeltaRs:  4.2077e-04 +/- 0.00814861 (1936.61%) (init = -1.560648)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.981
-    C(Rres, DeltaRs) = -0.933
-    C(a1, Rres)      =  0.913
-    C(a0, Rres)      =  0.825
-    C(a1, DeltaRs)   = -0.783
-    C(a0, DeltaRs)   = -0.676
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.979
+    C(a0, Rres)      =  0.966
+    C(Rres, DeltaRs) = -0.821
+    C(a1, DeltaRs)   = -0.722
+    C(a0, DeltaRs)   = -0.690
 
 Bp: 40.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 37
-    # data points      = 31
+    # function evals   = 35
+    # data points      = 13
     # variables        = 4
-    chi-square         = 0.02627656
-    reduced chi-square = 9.7321e-04
-    Akaike info crit   = -211.265019
-    Bayesian info crit = -205.529070
+    chi-square         = 3.0552e-04
+    reduced chi-square = 3.3947e-05
+    Akaike info crit   = -130.559639
+    Bayesian info crit = -128.299841
 [[Variables]]
-    a0:       1.9548e-08 +/- 1.2405e-09 (6.35%) (init = 0.001)
-    a1:       1.24032168 +/- 0.03673074 (2.96%) (init = 1.5)
-    Rres:     3.47759689 +/- 0.04292794 (1.23%) (init = 3.551647)
-    DeltaRs: -0.01844762 +/- 0.02996697 (162.44%) (init = -1.171183)
-    f:        647 (fixed)
+    a0:       5.3946e-08 +/- 1.1568e-08 (21.44%) (init = 0.001)
+    a1:       1.60074070 +/- 0.07632323 (4.77%) (init = 1.5)
+    Rres:     2.67451991 +/- 0.02401738 (0.90%) (init = 2.735918)
+    DeltaRs: -0.04557211 +/- 0.00814136 (17.86%) (init = -1.171183)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.982
-    C(Rres, DeltaRs) = -0.932
-    C(a1, Rres)      =  0.912
-    C(a0, Rres)      =  0.825
-    C(a1, DeltaRs)   = -0.781
-    C(a0, DeltaRs)   = -0.677
+    C(a0, a1)        =  0.999
+    C(a1, Rres)      =  0.970
+    C(a0, Rres)      =  0.957
+    C(Rres, DeltaRs) = -0.890
+    C(a1, DeltaRs)   = -0.785
+    C(a0, DeltaRs)   = -0.759
 
 Bp: 50.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 48
-    # data points      = 31
+    # function evals   = 31
+    # data points      = 13
     # variables        = 4
-    chi-square         = 0.03266995
-    reduced chi-square = 0.00121000
-    Akaike info crit   = -204.513891
-    Bayesian info crit = -198.777942
+    chi-square         = 8.1521e-04
+    reduced chi-square = 9.0579e-05
+    Akaike info crit   = -117.801110
+    Bayesian info crit = -115.541312
 [[Variables]]
-    a0:       2.1520e-08 +/- 1.4206e-09 (6.60%) (init = 0.001)
-    a1:       1.24911272 +/- 0.03793045 (3.04%) (init = 1.5)
-    Rres:     3.52618589 +/- 0.04687496 (1.33%) (init = 3.570921)
-    DeltaRs: -0.05454006 +/- 0.03306440 (60.62%) (init = -0.8915981)
-    f:        647 (fixed)
+    a0:       1.0289e-07 +/- 3.4770e-08 (33.79%) (init = 0.001)
+    a1:       1.78402318 +/- 0.11691842 (6.55%) (init = 1.5)
+    Rres:     2.74540409 +/- 0.03198954 (1.17%) (init = 2.749128)
+    DeltaRs: -0.07925286 +/- 0.01280608 (16.16%) (init = -0.8915981)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.982
-    C(Rres, DeltaRs) = -0.932
-    C(a1, Rres)      =  0.910
-    C(a0, Rres)      =  0.824
+    C(a0, a1)        =  0.999
+    C(a1, Rres)      =  0.963
+    C(a0, Rres)      =  0.950
+    C(Rres, DeltaRs) = -0.894
     C(a1, DeltaRs)   = -0.780
-    C(a0, DeltaRs)   = -0.677
+    C(a0, DeltaRs)   = -0.757
 
 Bp: 60.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 48
-    # data points      = 31
+    # function evals   = 26
+    # data points      = 14
     # variables        = 4
-    chi-square         = 0.04295172
-    reduced chi-square = 0.00159080
-    Akaike info crit   = -196.031639
-    Bayesian info crit = -190.295690
+    chi-square         = 0.00136978
+    reduced chi-square = 1.3698e-04
+    Akaike info crit   = -121.250259
+    Bayesian info crit = -118.694030
 [[Variables]]
-    a0:       2.3294e-08 +/- 1.6437e-09 (7.06%) (init = 0.001)
-    a1:       1.25114801 +/- 0.04038998 (3.23%) (init = 1.5)
-    Rres:     3.57281713 +/- 0.05326037 (1.49%) (init = 3.596678)
-    DeltaRs: -0.08461037 +/- 0.03769324 (44.55%) (init = -0.6733446)
-    f:        647 (fixed)
+    a0:       6.4587e-08 +/- 1.7233e-08 (26.68%) (init = 0.001)
+    a1:       1.58644185 +/- 0.09705229 (6.12%) (init = 1.5)
+    Rres:     2.73121480 +/- 0.04116093 (1.51%) (init = 2.777182)
+    DeltaRs: -0.09332285 +/- 0.01498840 (16.06%) (init = -0.6733446)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.982
-    C(Rres, DeltaRs) = -0.931
-    C(a1, Rres)      =  0.910
-    C(a0, Rres)      =  0.825
-    C(a1, DeltaRs)   = -0.779
-    C(a0, DeltaRs)   = -0.677
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.968
+    C(a0, Rres)      =  0.954
+    C(Rres, DeltaRs) = -0.882
+    C(a1, DeltaRs)   = -0.774
+    C(a0, DeltaRs)   = -0.748
 
 Bp: 70.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 36
-    # data points      = 28
+    # function evals   = 21
+    # data points      = 13
     # variables        = 4
-    chi-square         = 0.02284633
-    reduced chi-square = 9.5193e-04
-    Akaike info crit   = -191.112742
-    Bayesian info crit = -185.783924
+    chi-square         = 0.00172606
+    reduced chi-square = 1.9178e-04
+    Akaike info crit   = -108.049237
+    Bayesian info crit = -105.789440
 [[Variables]]
-    a0:       3.1176e-08 +/- 2.3360e-09 (7.49%) (init = 0.001)
-    a1:       1.34971772 +/- 0.03863626 (2.86%) (init = 1.5)
-    Rres:     3.68995768 +/- 0.04184569 (1.13%) (init = 3.647381)
-    DeltaRs: -0.12747295 +/- 0.03011596 (23.63%) (init = -0.4942963)
-    f:        647 (fixed)
+    a0:       6.1565e-08 +/- 1.7878e-08 (29.04%) (init = 0.001)
+    a1:       1.52678789 +/- 0.10654236 (6.98%) (init = 1.5)
+    Rres:     2.76115571 +/- 0.05499625 (1.99%) (init = 2.834658)
+    DeltaRs: -0.10562704 +/- 0.01948855 (18.45%) (init = -0.4942963)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.988
-    C(Rres, DeltaRs) = -0.936
-    C(a1, Rres)      =  0.908
-    C(a0, Rres)      =  0.840
-    C(a1, DeltaRs)   = -0.783
-    C(a0, DeltaRs)   = -0.702
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.973
+    C(a0, Rres)      =  0.960
+    C(Rres, DeltaRs) = -0.892
+    C(a1, DeltaRs)   = -0.801
+    C(a0, DeltaRs)   = -0.777
 
 Bp: 80.0 mT [mT]
 [[Model]]
     Model(BCS)
 [[Fit Statistics]]
     # fitting method   = leastsq
-    # function evals   = 36
-    # data points      = 28
+    # function evals   = 26
+    # data points      = 13
     # variables        = 4
-    chi-square         = 0.02855837
-    reduced chi-square = 0.00118993
-    Akaike info crit   = -184.864269
-    Bayesian info crit = -179.535451
+    chi-square         = 0.00116455
+    reduced chi-square = 1.2939e-04
+    Akaike info crit   = -113.164864
+    Bayesian info crit = -110.905066
 [[Variables]]
-    a0:       3.5090e-08 +/- 2.8219e-09 (8.04%) (init = 0.001)
-    a1:       1.38133644 +/- 0.04100355 (2.97%) (init = 1.5)
-    Rres:     3.79287172 +/- 0.04433338 (1.17%) (init = 3.731047)
-    DeltaRs: -0.13890553 +/- 0.03299975 (23.76%) (init = -0.3424903)
-    f:        647 (fixed)
+    a0:       7.8959e-08 +/- 1.8045e-08 (22.85%) (init = 0.001)
+    a1:       1.58767376 +/- 0.08298536 (5.23%) (init = 1.5)
+    Rres:     2.88396309 +/- 0.04194928 (1.45%) (init = 2.933312)
+    DeltaRs: -0.12586730 +/- 0.01482504 (11.78%) (init = -0.3424903)
+    f:        389 (fixed)
     Tc:       9.25 (fixed)
 [[Correlations]] (unreported correlations are < 0.100)
-    C(a0, a1)        =  0.989
-    C(Rres, DeltaRs) = -0.935
-    C(a1, Rres)      =  0.902
-    C(a0, Rres)      =  0.835
-    C(a1, DeltaRs)   = -0.779
-    C(a0, DeltaRs)   = -0.701
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.971
+    C(a0, Rres)      =  0.958
+    C(Rres, DeltaRs) = -0.887
+    C(a1, DeltaRs)   = -0.788
+    C(a0, DeltaRs)   = -0.763
+
+Bp: 90.0 mT [mT]
+[[Model]]
+    Model(BCS)
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 31
+    # data points      = 14
+    # variables        = 4
+    chi-square         = 0.00194393
+    reduced chi-square = 1.9439e-04
+    Akaike info crit   = -116.349423
+    Bayesian info crit = -113.793194
+[[Variables]]
+    a0:       5.9436e-08 +/- 1.4143e-08 (23.80%) (init = 0.001)
+    a1:       1.46367262 +/- 0.08782648 (6.00%) (init = 1.5)
+    Rres:     2.94915325 +/- 0.05632927 (1.91%) (init = 3.072912)
+    DeltaRs: -0.11379806 +/- 0.01784761 (15.68%) (init = -0.210721)
+    f:        389 (fixed)
+    Tc:       9.25 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.973
+    C(a0, Rres)      =  0.958
+    C(Rres, DeltaRs) = -0.874
+    C(a1, DeltaRs)   = -0.772
+    C(a0, DeltaRs)   = -0.743
+
+Bp: 100.0 mT [mT]
+[[Model]]
+    Model(BCS)
+[[Fit Statistics]]
+    # fitting method   = leastsq
+    # function evals   = 31
+    # data points      = 14
+    # variables        = 4
+    chi-square         = 0.00330455
+    reduced chi-square = 3.3046e-04
+    Akaike info crit   = -108.921164
+    Bayesian info crit = -106.364935
+[[Variables]]
+    a0:       5.0509e-08 +/- 1.4749e-08 (29.20%) (init = 0.001)
+    a1:       1.39371952 +/- 0.10931277 (7.84%) (init = 1.5)
+    Rres:     3.07281836 +/- 0.08037823 (2.62%) (init = 3.249621)
+    DeltaRs: -0.10501657 +/- 0.02337965 (22.26%) (init = -0.09431068)
+    f:        389 (fixed)
+    Tc:       9.25 (fixed)
+[[Correlations]] (unreported correlations are < 0.100)
+    C(a0, a1)        =  0.998
+    C(a1, Rres)      =  0.975
+    C(a0, Rres)      =  0.960
+    C(Rres, DeltaRs) = -0.869
+    C(a1, DeltaRs)   = -0.770
+    C(a0, DeltaRs)   = -0.740
 

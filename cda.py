@@ -21,7 +21,6 @@ print()
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedLocator, FixedFormatter
 import numpy as np
-from scipy.optimize import curve_fit
 from lmfit import Model
 
 """---------------------------------------------------------------------------------------
@@ -122,6 +121,10 @@ Read in the data from the input file
 #Read the input file line by line and extract data
 line_cnt = 1 #line count, it will start with line 1
 for line in file:
+
+    if 'New calibration' in line:
+        file.readline()
+        file.readline()
 
     if line_cnt <= skiplines: #skip the indicated number of lines at the beginning
         line_cnt += 1
@@ -259,6 +262,9 @@ for i in range(0,len(Eaccdata)):
             #fit = np.poly1d(coef)
             #print(fit)
         except ValueError:
+            ramp_Eacc.append(Eaccdata[i])
+            ramp_Rss.append(Rssdata[i])
+            ramp_weights.append(weights[i])
             continue
 
         for j in range(0,len(ramp_Rss)):
@@ -430,6 +436,7 @@ for i in range(0,len(legend_entries)):
 
         #fit is made in this line
         result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], weights=weights_sep[i])
+        print(result.best_fit)
 
         #Get the parameters calculated from the fits
         a0_fit = result.best_values['a0']
@@ -508,9 +515,18 @@ for i in range(0,len(legend_entries)):
 
     #plot the data points and fit lines
     if i < len(colors):
-        ax1.errorbar(Inv_Tdata_sep[i],Rs_sep[i], yerr=Rs_err_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        Inv_Tdata_sep_bt = []
+        Inv_Tdata_sep_at = []
+        for j in range(0,len(Inv_Tdata_sep[i])):
+            if Inv_Tdata_sep[i][j] < (1/2.175):
+                Inv_Tdata_sep_bt.append(Inv_Tdata_sep[i][j])
+            else:
+                Inv_Tdata_sep_at.append(Inv_Tdata_sep[i][j])
+        #ax1.errorbar(Inv_Tdata_sep[i],Rs_sep[i], yerr=Rs_err_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep[i], np.exp(result.best_fit), marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep_bt, np.exp(result.best_fit[:len(Inv_Tdata_sep_bt)]), marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep_at, np.exp(result.best_fit[len(Inv_Tdata_sep_bt):]), marker='None', linestyle='--',color=colors[i])
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
         #print(Inv_Tdata_sep[i], Inv_T_vals)
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep_ln[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
