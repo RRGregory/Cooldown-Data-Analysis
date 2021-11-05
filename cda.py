@@ -21,6 +21,7 @@ print()
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FixedLocator, FixedFormatter
 import numpy as np
+import pandas as pd
 from lmfit import Model
 
 """---------------------------------------------------------------------------------------
@@ -93,7 +94,7 @@ Qcol = int(Qcol_str)
 Tcol = int(Tcol_str)
 Eacccol = int(Eacccol_str)
 cavity = int(in_cavity)
-SWR = 1.114233
+SWR = 1.080124
 
 #Subtract 1 because Python indexing starts at 0
 Qcol -= 1
@@ -138,7 +139,10 @@ for line in file:
         continue
 
     try: #add data to the lists
-        Qdata.append(float(columns[Qcol]))
+        if float(columns[Qcol]) > 0:
+            Qdata.append(float(columns[Qcol]))
+        else:
+            continue
     except IndexError:
         print("Warning: index error on line", line_cnt, "in the Q column. Skipping line", line_cnt)
         line_cnt += 1
@@ -148,31 +152,34 @@ for line in file:
         line_cnt += 1
         continue
 
-    try: #Skip an entire line if any of the columns has an error so that the lists are of the same length
-        Tdata.append(float(columns[Tcol]))
-    except IndexError:
-        print("Warning: index error on line", line_cnt, "in the Temperature column. Skipping line", line_cnt)
-        Qdata.pop()
-        line_cnt += 1
-        continue
-    except ValueError:
-        print("Value on line", line_cnt, "in the Temperature column is not a number. Skipping line", line_cnt)
-        Qdata.pop()
-        line_cnt += 1
-        continue
-
     try:
         Eaccdata.append(float(columns[Eacccol]))
     except IndexError:
         print("Warning: index error on line", line_cnt, "in the Eacc column. Skipping line", line_cnt)
         Qdata.pop()
-        Tdata.pop()
         line_cnt += 1
         continue
     except ValueError:
         print("Value on line", line_cnt, "in the Eacc column is not a number. Skipping line", line_cnt)
         Qdata.pop()
-        Tdata.pop()
+        line_cnt += 1
+        continue
+
+    try: #Skip an entire line if any of the columns has an error so that the lists are of the same length
+        if float(columns[Tcol]) > 0:
+            Tdata.append(float(columns[Tcol]))
+        else:
+            Tdata.append(np.nan)
+            line_cnt += 1
+            continue
+    except IndexError:
+        Tdata.append(np.nan)
+        line_cnt += 1
+        continue
+    except ValueError:
+        print("Value on line", line_cnt, "in the Temperature column is not a number. Skipping line", line_cnt)
+        Qdata.pop()
+        Eaccdata.pop()
         line_cnt += 1
         continue
 
@@ -182,6 +189,21 @@ file.close()
 """---------------------------------------------------------------------------------------
 For each accelerating field ramp up, calculate the feild corrected Rs values
 ---------------------------------------------------------------------------------------"""
+#print(Tdata)
+#for i in range(0,len(Tdata)-2):
+
+    #if Tdata[i] == 0. and Tdata[i+1] != 0:
+        #prev_pt = Tdata[i-1]
+        #next_pt = Tdata[i+1]
+
+        #avg = (prev_pt+next_pt)/2
+
+        #Tdata[i] = avg
+
+Tdata_pd = pd.Series(Tdata)
+Tdata = Tdata_pd.interpolate()
+#print(Tdata.to_string())
+
 #Get the non-corrected Rs* data
 for i in range(0,len(Qdata)):
     Rssdata.append((G/Qdata[i])*10**9)
@@ -257,8 +279,10 @@ for i in range(0,len(Eaccdata)):
         #Do the fit here
         #print(len(ramp_Eacc),Eaccdata[i])
         try:
+            #print(len(ramp_Eacc), len(ramp_Rss))
             coef,cov = np.polyfit(ramp_Eacc,ramp_Rss,3, w=ramp_weights, cov=True) #3rd degree polynomial
             #print(coef)
+
             #fit = np.poly1d(coef)
             #print(fit)
         except ValueError:
@@ -312,6 +336,7 @@ for value in FieldValues:
 #Make two lists containing lists of the inverse temperature data and the
 #corrected surface resistance data. Each sub-list corresponds to a different
 #field amplitude
+
 for i in range(0,len(Eaccdata)):
 
     for j in range(0,len(FieldValues)):
@@ -350,13 +375,35 @@ def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
     a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
     C = 8/(np.exp(0.5772156649))
 
-    return (10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step
+    result = ((10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step)
+    #print(result, a0, a1, Rres, DeltaRs)
 
-def Plotting_BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
-    y_vals = []
-    for i in T:
-        y_vals.append(BCS(i, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25))
-    return y_vals
+    #return result
+    return np.log(result)
+
+def Plotting_BCS_bt(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
+    kB = 8.617333262145*10**(-5) #Boltzman constant
+    hbar = 6.582119569*10**(-16)
+
+    a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
+    C = 8/(np.exp(0.5772156649))
+
+    result = ((10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres)
+    #print(result, a0, a1, Rres, DeltaRs)
+
+    return result
+
+def Plotting_BCS_at(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
+    kB = 8.617333262145*10**(-5) #Boltzman constant
+    hbar = 6.582119569*10**(-16)
+
+    a1T = a1*np.sqrt(np.cos((np.pi/2)*(T/Tc)**2))
+    C = 8/(np.exp(0.5772156649))
+
+    result = ((10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs)
+    #print(result, a0, a1, Rres, DeltaRs)
+
+    return result
 
 #Second order polynomial fit function
 def Poly2(T, a, b, c):
@@ -424,19 +471,28 @@ file_fit_params = open('fit_params.txt', 'w')
 
 for i in range(0,len(legend_entries)):
 
-    #Make inital guesses for the residual resistance
-    res_min = min(Rs_sep_ln[i])
-    DeltaRs_guess = np.log(0.01 + i/10)
+    #Make inital guesses for the residual resistance and Delta Rs
+    res_min_guess = min(Rs_sep[i])
+    DeltaRs_guess = i/10
 
     if fit_funs[i] == 'BCS':
         #Fit each feild amplitude data set to the RBCS formula
-        params = fmodel.make_params(a0=0.001, a1=1.5, Rres=res_min, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
+        params = fmodel.make_params(a0=1, a1=1.5, Rres=res_min_guess, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
         params['f'].vary = False
         params['Tc'].vary = False
+        params['DeltaRs'].set(min=-12, max=1)
+        params['a0'].set(min=0)
+        params['Rres'].set(min=0)
+        #if i == 1:
+            #params['DeltaRs'].set(min=-2, max=1)
+        #if i==3:
+            #params['DeltaRs'].set(min=-4,max=1)
+        #if i==5:
+            #params['DeltaRs'].set(min=-7,max=1)
 
         #fit is made in this line
         result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], weights=weights_sep[i])
-        print(result.best_fit)
+        #print(result.best_fit)
 
         #Get the parameters calculated from the fits
         a0_fit = result.best_values['a0']
@@ -444,7 +500,8 @@ for i in range(0,len(legend_entries)):
         Rres_fit = result.best_values['Rres']
         DeltaRs_fit = result.best_values['DeltaRs']
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
-        #print(round(np.exp(-1*DeltaRs_fit),4))
+        #print('delta Rs: ', round(np.exp(-1*DeltaRs_fit),4))
+        print(round((-1*DeltaRs_fit),2))
 
         #print(result.fit_report())
 
@@ -494,39 +551,66 @@ for i in range(0,len(legend_entries)):
         e_fit = result.best_values['e']
 
     #Get the data for the total surface resistance calculated from the fits
-    for j in range(0, len(fixed_temps)):
+    #for j in range(0, len(fixed_temps)):
 
-        if fit_funs[i] == 'BCS':
-            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+        #if fit_funs[i] == 'BCS':
+            #Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
             #print(round(Rres_fit,4))
 
-        elif fit_funs[i] == 'p2':
-            Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit, b_fit, c_fit))
+        #elif fit_funs[i] == 'p2':
+            #Rs_fixed_temps[j].append(Poly2(fixed_temps[j], a_fit, b_fit, c_fit))
 
-        elif fit_funs[i] == 'p3':
-            Rs_fixed_temps[j].append(Poly3(fixed_temps[j], a_fit, b_fit, c_fit, d_fit))
+        #elif fit_funs[i] == 'p3':
+            #Rs_fixed_temps[j].append(Poly3(fixed_temps[j], a_fit, b_fit, c_fit, d_fit))
 
-        elif fit_funs[i] == 'p4':
-            Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit, b_fit, c_fit, d_fit, e_fit))
+        #elif fit_funs[i] == 'p4':
+            #Rs_fixed_temps[j].append(Poly4(fixed_temps[j], a_fit, b_fit, c_fit, d_fit, e_fit))
 
-    for k in range(0, len(T_vals)):
+    #for k in range(0, len(T_vals)):
 
-        Rs_for_T_vals[i].append(BCS(T_vals[k], a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+        #Rs_for_T_vals[i].append(BCS(T_vals[k], a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
 
     #plot the data points and fit lines
     if i < len(colors):
         Inv_Tdata_sep_bt = []
+        Tdata_sep_bt = []
         Inv_Tdata_sep_at = []
+        Tdata_sep_at = []
         for j in range(0,len(Inv_Tdata_sep[i])):
             if Inv_Tdata_sep[i][j] < (1/2.175):
                 Inv_Tdata_sep_bt.append(Inv_Tdata_sep[i][j])
+                Tdata_sep_bt.append(Tdata_sep[i][j])
             else:
                 Inv_Tdata_sep_at.append(Inv_Tdata_sep[i][j])
+                Tdata_sep_at.append(Tdata_sep[i][j])
+
+        x_bt = np.linspace(3.050,2.175,50)
+        x_inv_bt = []
+        x_at = np.linspace(2.175,1.980,40)
+        x_inv_at = []
+
+        fit_to_plot_bt = []
+        fit_to_plot_at = []
+        for k in range(0,len(x_bt)):
+            fit_to_plot_bt.append(Plotting_BCS_bt(x_bt[k],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+            x_inv_bt.append(1/x_bt[k])
+        for k in range(0,len(x_at)):
+            fit_to_plot_at.append(Plotting_BCS_at(x_at[k],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+            x_inv_at.append(1/x_at[k])
+
+        step_plot_x = [x_inv_bt[-1],x_inv_at[0]]
+        step_plot_y = [fit_to_plot_bt[-1], fit_to_plot_at[0]]
+
         #ax1.errorbar(Inv_Tdata_sep[i],Rs_sep[i], yerr=Rs_err_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
+        ax1.step(step_plot_x, step_plot_y, marker='None', linestyle='--',color=colors[i])
         #ax1.plot(T_vals, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep_bt, np.exp(result.best_fit[:len(Inv_Tdata_sep_bt)]), marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep_at, np.exp(result.best_fit[len(Inv_Tdata_sep_bt):]), marker='None', linestyle='--',color=colors[i])
+        #ax1.plot(Inv_Tdata_sep_bt, np.exp(result.best_fit[:len(Inv_Tdata_sep_bt)]), marker='None', linestyle='--',color=colors[i])
+        #ax1.plot(Inv_Tdata_sep_at, np.exp(result.best_fit[len(Inv_Tdata_sep_bt):]), marker='None', linestyle='--',color=colors[i])
+        ax1.plot(x_inv_bt, fit_to_plot_bt, marker='None', linestyle='--',color=colors[i])
+        ax1.plot(x_inv_at, fit_to_plot_at, marker='None', linestyle='--',color=colors[i])
+        #print(fit_to_plot_bt)
+        #ax1.plot(Inv_Tdata_sep_at, Plotting_BCS_at(Tdata_sep_at,a0_fit,a1_fit,Rres_fit,DeltaRs_fit), marker='None', linestyle='--',color=colors[i])
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
         #print(Inv_Tdata_sep[i], Inv_T_vals)
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep_ln[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
@@ -542,25 +626,26 @@ for i in range(0,len(legend_entries)):
 
 file_fit_params.close()
 
-for i in range(0, len(fixed_temps)):
+#for i in range(0, len(fixed_temps)):
 
-    params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
-    result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
+    #params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
+    #result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
 
-    str_beta_sign = '-'
-    if result.best_values['beta'] >= 0:
-        str_beta_sign = '+'
+    #str_beta_sign = '-'
+    #if result.best_values['beta'] >= 0:
+        #str_beta_sign = '+'
 
-    str_gamma_sign = '-'
-    if result.best_values['gamma'] >= 0:
-        str_gamma_sign = '+'
+    #str_gamma_sign = '-'
+    #if result.best_values['gamma'] >= 0:
+        #str_gamma_sign = '+'
 
-    eq_str = ' Equation of fit line: ' + str(round(result.best_values['alpha'],2)) + ' ' +  str_beta_sign + ' ' +\
-    str(abs(round(result.best_values['beta'],3))) + 'B' + ' ' + str_gamma_sign + ' ' + \
-    str(abs(round(result.best_values['gamma'],4))) + r'B$^2$'
+    #eq_str = ' Equation of fit line: ' + str(round(result.best_values['alpha'],2)) + ' ' +  str_beta_sign + ' ' +\
+    #str(abs(round(result.best_values['beta'],3))) + 'B' + ' ' + str_gamma_sign + ' ' + \
+    #str(abs(round(result.best_values['gamma'],5))) + r'B$^2$'
 
-    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
-    ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
+    #ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
+    #ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
+    #ax3.plot(FieldValues, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
 
 #format the x axis
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
@@ -568,13 +653,14 @@ x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$
 x_locator = FixedLocator([0.1, 1/9, 0.125, 1/7, 1/6, 0.2, 1/4.5, 0.25, 1/3.5, 1/3, 0.4, 1/2.2, 0.5, 1/1.8, 1/1.7])
 
 ax1.set_yscale('log')
-ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
-ax1.set_ylabel(r'R$_s[n\Omega]$')
+ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]',fontsize=14)
+ax1.set_ylabel(r'R$_s[n\Omega]$',fontsize=14)
 ax1.xaxis.set_major_formatter(x_formatter)
 ax1.xaxis.set_major_locator(x_locator)
+ax1.tick_params(axis='both', which='major', labelsize=14)
 ax1.vlines(x=0.45977, ymin=0, ymax=200, color='gray', linestyle='dashed', label = 'lambda point')
-ax1.legend(title='Field Amplitude')
-ax1.set_title("Surface Resistance vs Inverse Temperature")
+ax1.legend(title='Field Amplitude',fontsize=14)
+ax1.set_title("Surface Resistance vs Inverse Temperature",fontsize=18)
 ax1.grid(True)
 
 ax2.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
@@ -586,10 +672,10 @@ ax2.legend(title='Field Amplitude')
 ax2.grid(True)
 
 #ax3.set_yscale('log')
-ax3.set_xlabel('RF field [mT]')
-ax3.set_ylabel(r'R$_s[n\Omega]$')
-ax3.legend(title='Temperature [K]')
-ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
-ax3.grid(True)
+#ax3.set_xlabel('RF field [mT]')
+#ax3.set_ylabel(r'R$_s[n\Omega]$')
+#ax3.legend(title='Temperature [K]')
+#ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+#ax3.grid(True)
 
 plt.show()
