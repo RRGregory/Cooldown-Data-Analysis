@@ -73,10 +73,10 @@ print(msg)
 
 in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
 
-fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
+fixed_temps = [2.1, 2.3, 2.7] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
-fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
+fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
 
 skiplines = 0 #The default number of lines to skip at the beginning of the table is zero
 
@@ -130,6 +130,16 @@ for line in file:
     if line_cnt <= skiplines: #skip the indicated number of lines at the beginning
         line_cnt += 1
         continue
+
+    if line_cnt == 1:
+        line = line.replace(' ','')
+        columns = line.split()
+        col_cnt = 0
+
+        for label in columns:
+            if 'TEMPK3' in label:
+                Tcol = col_cnt
+            col_cnt += 1
 
     line = line.strip()
     columns = line.split()
@@ -189,17 +199,6 @@ file.close()
 """---------------------------------------------------------------------------------------
 For each accelerating field ramp up, calculate the feild corrected Rs values
 ---------------------------------------------------------------------------------------"""
-#print(Tdata)
-#for i in range(0,len(Tdata)-2):
-
-    #if Tdata[i] == 0. and Tdata[i+1] != 0:
-        #prev_pt = Tdata[i-1]
-        #next_pt = Tdata[i+1]
-
-        #avg = (prev_pt+next_pt)/2
-
-        #Tdata[i] = avg
-
 Tdata_pd = pd.Series(Tdata)
 Tdata = Tdata_pd.interpolate()
 #print(Tdata.to_string())
@@ -221,6 +220,9 @@ Rs_err = [] #Array for uncertainties in corrected Rs data
 #Function for doing the Rs* to Rs correction using the beta factors
 def Rs_correction(Bp, Rparam):
     return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
+
+#Do a reverse Rs to Rs* correction
+def Rev_Rs_correction(Bp, Rparam):
 
 def Delta_Rs(Bp,Rparam,delta_Rparam,delta_Bp):
 
@@ -376,7 +378,7 @@ def BCS(T, a0, a1, Rres, DeltaRs, f=freq, Tc=9.25):
     C = 8/(np.exp(0.5772156649))
 
     result = ((10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + Rres + DeltaRs*Step)
-    #print(result, a0, a1, Rres, DeltaRs)
+    #print('func', result, a0, a1, Rres, DeltaRs)
 
     #return result
     return np.log(result)
@@ -430,6 +432,7 @@ fixed_T_model = Model(fixed_T_Poly)
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
 fig3, ax3 = plt.subplots(nrows=1, ncols=1)
+fig4, ax4 = plt.subplots(nrows=1, ncols=1)
 
 colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', '0.8' ]
 shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
@@ -440,15 +443,20 @@ temps_legend = []
 #Values of the total surface resistance for fixed temperatures calculated from the fits
 Rs_fixed_temps = []
 
+#Values of the non-corrected surface resistance for fixed temperatures calculated from the fits
+Rss_fixed_temps = []
+
 #Temperature values for the fit plotting
 T_vals = np.linspace(1.9, 4.5, 50)
 Inv_T_vals = np.linspace(1/1.9, 1/4.5, 50)
 Rs_for_T_vals = []
+Rss_for_T_vals = []
 
 #Make a list of lists to store the total surface resistance for fixed temperature values
 #each sub-list corresponds to a different fixed temperature
 for i in range(0,len(fixed_temps)):
     Rs_fixed_temps.append([])
+    Rss_fixed_temps.append([])
 
 for i in range(0,len(FieldValues)):
 
@@ -456,6 +464,7 @@ for i in range(0,len(FieldValues)):
     legend_entries.append(name)
 
     Rs_for_T_vals.append([])
+    Rss_for_T_vals.append([])
 
 for i in range(0, len(fixed_temps)):
     temp_str = str(fixed_temps[i])
@@ -473,6 +482,8 @@ for i in range(0,len(legend_entries)):
 
     #Make inital guesses for the residual resistance and Delta Rs
     res_min_guess = min(Rs_sep[i])
+    #print('Res min: ', res_min_guess)
+    #print()
     DeltaRs_guess = i/10
 
     if fit_funs[i] == 'BCS':
@@ -480,18 +491,22 @@ for i in range(0,len(legend_entries)):
         params = fmodel.make_params(a0=1, a1=1.5, Rres=res_min_guess, DeltaRs=DeltaRs_guess, f=freq, Tc=9.25)
         params['f'].vary = False
         params['Tc'].vary = False
-        params['DeltaRs'].set(min=-12, max=1)
+        #params['DeltaRs'].set(min=-20, max=0)
         params['a0'].set(min=0)
-        params['Rres'].set(min=0)
+        #params['a1'].set(min=0,max=10)
+        params['Rres'].set(min=(res_min_guess-2),max=(res_min_guess))
         #if i == 1:
             #params['DeltaRs'].set(min=-2, max=1)
+            #params['a1'].set(max=2)
         #if i==3:
             #params['DeltaRs'].set(min=-4,max=1)
         #if i==5:
             #params['DeltaRs'].set(min=-7,max=1)
 
         #fit is made in this line
-        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], weights=weights_sep[i])
+        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], method='powell', weights=weights_sep[i], max_nfev=200000)
+        #print(Tdata_sep[i])
+        #print(Rs_sep_ln[i])
         #print(result.best_fit)
 
         #Get the parameters calculated from the fits
@@ -501,7 +516,10 @@ for i in range(0,len(legend_entries)):
         DeltaRs_fit = result.best_values['DeltaRs']
         #print(a0_fit, a1_fit, Rres_fit, DeltaRs_fit)
         #print('delta Rs: ', round(np.exp(-1*DeltaRs_fit),4))
-        print(round((-1*DeltaRs_fit),2))
+        #print(round((-1*DeltaRs_fit),2), '+/-', round(result.params['DeltaRs'].stderr,2))
+        #print(round((-1*DeltaRs_fit),2))
+        print(round(result.params['DeltaRs'].stderr,2))
+        #print(Rres_fit)
 
         #print(result.fit_report())
 
@@ -551,10 +569,10 @@ for i in range(0,len(legend_entries)):
         e_fit = result.best_values['e']
 
     #Get the data for the total surface resistance calculated from the fits
-    #for j in range(0, len(fixed_temps)):
+    for j in range(0, len(fixed_temps)):
 
-        #if fit_funs[i] == 'BCS':
-            #Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
+        if fit_funs[i] == 'BCS':
+            Rs_fixed_temps[j].append(BCS(fixed_temps[j],a0_fit,a1_fit,Rres_fit,DeltaRs_fit))
             #print(round(Rres_fit,4))
 
         #elif fit_funs[i] == 'p2':
@@ -586,7 +604,7 @@ for i in range(0,len(legend_entries)):
 
         x_bt = np.linspace(3.050,2.175,50)
         x_inv_bt = []
-        x_at = np.linspace(2.175,1.980,40)
+        x_at = np.linspace(2.175,1.65,40)
         x_inv_at = []
 
         fit_to_plot_bt = []
@@ -626,34 +644,36 @@ for i in range(0,len(legend_entries)):
 
 file_fit_params.close()
 
-#for i in range(0, len(fixed_temps)):
+for i in range(0, len(fixed_temps)):
 
-    #params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
-    #result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
+    params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
+    result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
 
-    #str_beta_sign = '-'
-    #if result.best_values['beta'] >= 0:
-        #str_beta_sign = '+'
+    str_beta_sign = '-'
+    if result.best_values['beta'] >= 0:
+        str_beta_sign = '+'
 
-    #str_gamma_sign = '-'
-    #if result.best_values['gamma'] >= 0:
-        #str_gamma_sign = '+'
+    str_gamma_sign = '-'
+    if result.best_values['gamma'] >= 0:
+        str_gamma_sign = '+'
 
-    #eq_str = ' Equation of fit line: ' + str(round(result.best_values['alpha'],2)) + ' ' +  str_beta_sign + ' ' +\
-    #str(abs(round(result.best_values['beta'],3))) + 'B' + ' ' + str_gamma_sign + ' ' + \
-    #str(abs(round(result.best_values['gamma'],5))) + r'B$^2$'
+    eq_str = ' Equation of fit line: ' + str(round(result.best_values['alpha'],2)) + ' ' +  str_beta_sign + ' ' +\
+    str(abs(round(result.best_values['beta'],3))) + 'B' + ' ' + str_gamma_sign + ' ' + \
+    str(abs(round(result.best_values['gamma'],5))) + r'B$^2$'
 
-    #ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
-    #ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
+    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
+    ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
     #ax3.plot(FieldValues, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
 
+print("Rs T vals")
+print(Rs_fixed_temps)
 #format the x axis
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
 x_locator = FixedLocator([0.1, 1/9, 0.125, 1/7, 1/6, 0.2, 1/4.5, 0.25, 1/3.5, 1/3, 0.4, 1/2.2, 0.5, 1/1.8, 1/1.7])
 
 ax1.set_yscale('log')
-ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]',fontsize=14)
+ax1.set_xlabel(r'Inverse Temperature [K$^{-1}$]',fontsize=14)
 ax1.set_ylabel(r'R$_s[n\Omega]$',fontsize=14)
 ax1.xaxis.set_major_formatter(x_formatter)
 ax1.xaxis.set_major_locator(x_locator)
@@ -672,10 +692,11 @@ ax2.legend(title='Field Amplitude')
 ax2.grid(True)
 
 #ax3.set_yscale('log')
-#ax3.set_xlabel('RF field [mT]')
-#ax3.set_ylabel(r'R$_s[n\Omega]$')
-#ax3.legend(title='Temperature [K]')
-#ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
-#ax3.grid(True)
+ax3.set_xlabel('RF field [mT]',fontsize=14)
+ax3.set_ylabel(r'R$_s[n\Omega]$',fontsize=14)
+ax3.legend(title='Temperature [K]',fontsize=14)
+ax3.tick_params(axis='both', which='major', labelsize=14)
+ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax3.grid(True)
 
 plt.show()
