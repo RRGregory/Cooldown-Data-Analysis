@@ -222,7 +222,18 @@ def Rs_correction(Bp, Rparam):
     return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
 #Do a reverse Rs to Rs* correction
-def Rev_Rs_correction(Bp, Rparam):
+def Rev_Rs_correction(Rs_ramp,Bp):
+
+    Bp_ramp = FieldValues
+    #print(Bp_ramp)
+    #print(Rs_ramp)
+    coef = np.polyfit(Bp_ramp,Rs_ramp,3) #3rd degree polynomial
+
+    Rparam = coef
+
+    Rss = (Rparam[0]*Bp**3)/(beta3_all[cavity]) + (Rparam[1]*Bp**2)/(beta2_all[cavity]) + (Rparam[2]*Bp)/(beta1_all[cavity]) + (Rparam[3])/(beta0_all[cavity])
+
+    return Rss
 
 def Delta_Rs(Bp,Rparam,delta_Rparam,delta_Bp):
 
@@ -445,6 +456,7 @@ Rs_fixed_temps = []
 
 #Values of the non-corrected surface resistance for fixed temperatures calculated from the fits
 Rss_fixed_temps = []
+Q_fixed_temps = []
 
 #Temperature values for the fit plotting
 T_vals = np.linspace(1.9, 4.5, 50)
@@ -457,6 +469,7 @@ Rss_for_T_vals = []
 for i in range(0,len(fixed_temps)):
     Rs_fixed_temps.append([])
     Rss_fixed_temps.append([])
+    Q_fixed_temps.append([])
 
 for i in range(0,len(FieldValues)):
 
@@ -644,6 +657,15 @@ for i in range(0,len(legend_entries)):
 
 file_fit_params.close()
 
+for j in range(0,len(fixed_temps)):
+
+    for k in range(0,len(FieldValues)):
+        #print(FieldValues[k])
+        Rss_val = Rev_Rs_correction(Rs_fixed_temps[j],FieldValues[k])
+
+        Rss_fixed_temps[j].append(Rss_val)
+        Q_fixed_temps[j].append((G_vals[cavity]*1e9)/Rss_val)
+
 for i in range(0, len(fixed_temps)):
 
     params = fixed_T_model.make_params(alpha=1, beta=1, gamma=1)
@@ -664,9 +686,12 @@ for i in range(0, len(fixed_temps)):
     ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
     ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
     #ax3.plot(FieldValues, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
+    ax4.plot(FieldValues, Q_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]), color=colors[i])
 
 print("Rs T vals")
 print(Rs_fixed_temps)
+print()
+print(Rss_fixed_temps)
 #format the x axis
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
  r'4.5$^{-1}$', r'4.0$^{-1}$', r'3.5$^{-1}$', r'3.0$^{-1}$', r'2.5$^{-1}$', r'2.2$^{-1}$', r'2.0$^{-1}$', r'1.8$^{-1}$', r'1.7$^{-1}$'])
@@ -698,5 +723,12 @@ ax3.legend(title='Temperature [K]',fontsize=14)
 ax3.tick_params(axis='both', which='major', labelsize=14)
 ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
 ax3.grid(True)
+
+ax4.set_xlabel('RF field [mT]',fontsize=14)
+ax4.set_ylabel('Q',fontsize=14)
+ax4.legend(title='Temperature [K]',fontsize=14)
+ax4.tick_params(axis='both', which='major', labelsize=14)
+#ax4.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax4.grid(True)
 
 plt.show()
