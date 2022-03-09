@@ -73,7 +73,7 @@ print(msg)
 
 in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
 
-fixed_temps = [2.0, 2.2, 3.0, 4.0] #default fixed temperatures to analyze
+fixed_temps = [1.8, 2.1, 2.3, 2.5, 3.0, 3.5, 4.0] #default fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
 fit_funs_bt = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
@@ -193,6 +193,20 @@ Rs = [] #Array for corrected Rs data
 def Rs_correction(Bp, Rparam):
     return beta3_all[cavity]*Rparam[0]*Bp**3 + beta2_all[cavity]*Rparam[1]*Bp**2 + beta1_all[cavity]*Rparam[2]*Bp + beta0_all[cavity]*Rparam[3]
 
+#Do a reverse Rs to Rs* correction
+def Rev_Rs_correction(Rs_ramp,Bp):
+
+    Bp_ramp = FieldValues
+    #print(Bp_ramp)
+    #print(Rs_ramp)
+    coef = np.polyfit(Bp_ramp,Rs_ramp,3) #3rd degree polynomial
+
+    Rparam = coef
+
+    Rss = (Rparam[0]*Bp**3)/(beta3_all[cavity]) + (Rparam[1]*Bp**2)/(beta2_all[cavity]) + (Rparam[2]*Bp)/(beta1_all[cavity]) + (Rparam[3])/(beta0_all[cavity])
+
+    return Rss
+
 #This loop gets the corrected Rs data and puts it in Rs
 for i in range(0,len(Eaccdata)):
 
@@ -273,20 +287,24 @@ Separate the data by different field amplitude values
 Inv_Tdata_sep_bt = [] #list of lists for inverse temperature data separated by field amplitude before superfluid helium transition (bt)
 Tdata_sep_bt = [] #list of lists for temperature data separated by field amplitude before superfluid helium transition (bt)
 Rs_sep_bt = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude before superfluid helium transition (bt)
+Rs_sep_ln_bt = [] #list of lists for the natural logarithm of the surface resistance data in nano-ohms separated by field amplitude
 
 Inv_Tdata_sep_at = [] #list of lists for inverse temperature data separated by field amplitude after superfluid helium transition (at)
 Tdata_sep_at = [] #list of lists for temperature data separated by field amplitude after superfluid helium transition (at)
 Rs_sep_at = [] #list of lists for surface resistance data in nano-ohms separated by field amplitude after superfluid helium transition (at)
+Rs_sep_ln_at = [] #list of lists for the natural logarithm of the surface resistance data in nano-ohms separated by field amplitude
 
 for value in FieldValues:
 
     Inv_Tdata_sep_bt.append([])
     Tdata_sep_bt.append([])
     Rs_sep_bt.append([])
+    Rs_sep_ln_bt.append([])
 
     Inv_Tdata_sep_at.append([])
     Tdata_sep_at.append([])
     Rs_sep_at.append([])
+    Rs_sep_ln_at.append([])
 
 #Make two lists containing lists of the inverse temperature data and the
 #corrected surface resistance data. Each sub-list corresponds to a different
@@ -300,6 +318,7 @@ for i in range(0,len(Eaccdata_bt)):
             Inv_Tdata_sep_bt[j].append(1/Tdata_bt[i])
             Tdata_sep_bt[j].append(Tdata_bt[i])
             Rs_sep_bt[j].append(Rs_bt[i]*(10**9))
+            Rs_sep_ln_bt[j].append(np.log(Rs_bt[i]*(10**9)))
 
 for i in range(0,len(Eaccdata_at)):
 
@@ -309,6 +328,7 @@ for i in range(0,len(Eaccdata_at)):
             Inv_Tdata_sep_at[j].append(1/Tdata_at[i])
             Tdata_sep_at[j].append(Tdata_at[i])
             Rs_sep_at[j].append(Rs_at[i]*(10**9))
+            Rs_sep_ln_at[j].append(np.log(Rs_at[i]*(10**9)))
 
 """---------------------------------------------------------------------------------------
 Get values for the superfluid transition of helium
@@ -407,6 +427,7 @@ fixed_T_model = Model(fixed_T_Poly)
 fig1, ax1 = plt.subplots(nrows=1, ncols=1)
 fig2, ax2 = plt.subplots(nrows=1, ncols=1)
 fig3, ax3 = plt.subplots(nrows=1, ncols=1)
+fig4, ax4 = plt.subplots(nrows=1, ncols=1)
 
 colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', '0.8' ]
 shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
@@ -417,10 +438,16 @@ temps_legend = []
 #Values of the total surface resistance for fixed temperatures calculated from the fits
 Rs_fixed_temps = []
 
+#Values of the non-corrected surface resistance for fixed temperatures calculated from the fits
+Rss_fixed_temps = []
+Q_fixed_temps = []
+
 #Make a list of lists to store the total surface resistance for fixed temperature values
 #each sub-list corresponds to a different fixed temperature
 for i in range(0,len(fixed_temps)):
     Rs_fixed_temps.append([])
+    Rss_fixed_temps.append([])
+    Q_fixed_temps.append([])
 
 for i in range(0,len(FieldValues)):
 
@@ -447,7 +474,7 @@ for i in range(0,len(legend_entries)):
         params_bt['Tc'].vary = False
 
         #fit is made in this line
-        result_bt = fmodel.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+        result_bt = fmodel.fit(Rs_sep_ln_bt[i], params_bt, T=Tdata_sep_bt[i], method='powell')
 
         #Get the parameters calculated from the fits
         a0_fit_bt = result_bt.best_values['a0']
@@ -470,7 +497,7 @@ for i in range(0,len(legend_entries)):
 
     elif fit_funs_bt[i] == 'p3':
         params_bt = p3model.make_params(a=3, b=2, c=1, d=res_min_bt)
-        result_bt = p3model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i])
+        result_bt = p3model.fit(Rs_sep_bt[i], params_bt, T=Tdata_sep_bt[i], method='powell')
 
         #Get the parameters calculated from the fits
         a_fit_bt = result_bt.best_values['a']
@@ -497,7 +524,7 @@ for i in range(0,len(legend_entries)):
         params_at['Tc'].vary = False
 
         #fit is made in this line
-        result_at = fmodel.fit(Rs_sep_at[i], params_at, T=Tdata_sep_at[i])
+        result_at = fmodel.fit(Rs_sep_ln_at[i], params_at, T=Tdata_sep_at[i])
 
         #Get the parameters calculated from the fits
         a0_fit_at = result_at.best_values['a0']
@@ -576,11 +603,11 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep_bt[i],Rs_sep_bt[i], marker='o', linestyle='none', markersize=4, color=colors[i], label=legend_entries[i])
         ax1.plot(Inv_Tdata_sep_at[i],Rs_sep_at[i], marker='o', linestyle='none', markersize=4, color=colors[i])
 
-        ax1.plot(Inv_Tdata_sep_bt[i], result_bt.best_fit, marker='None', linestyle='--',color=colors[i])
-        ax1.plot(Inv_Tdata_sep_at[i], result_at.best_fit, marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep_bt[i], np.exp(result_bt.best_fit), marker='None', linestyle='--',color=colors[i])
+        ax1.plot(Inv_Tdata_sep_at[i], np.exp(result_at.best_fit), marker='None', linestyle='--',color=colors[i])
 
-        ax2.plot(Inv_Tdata_sep_bt[i],((result_bt.residual))*100/Rs_sep_bt[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
-        ax2.plot(Inv_Tdata_sep_at[i],((result_at.residual))*100/Rs_sep_at[i], marker='o', markersize=3, color=colors[i])
+        ax2.plot(Inv_Tdata_sep_bt[i],((result_bt.residual))*100/Rs_sep_ln_bt[i], marker='o', markersize=3, color=colors[i], label=legend_entries[i])
+        ax2.plot(Inv_Tdata_sep_at[i],((result_at.residual))*100/Rs_sep_ln_at[i], marker='o', markersize=3, color=colors[i])
 
     elif i < (len(colors)+len(shapes)):
         ax1.plot(Inv_Tdata_sep[i],Rs_sep[i], marker=shapes[i-len(colors)], linestyle='none', markersize=4, color='black', label=legend_entries[i])
@@ -593,17 +620,27 @@ for i in range(0,len(legend_entries)):
 
     #print(round(lamb_bt,4), ",", round(lamb_at,4))
 
+for j in range(0,len(fixed_temps)):
+
+    for k in range(0,len(FieldValues)):
+        #print(FieldValues[k])
+        Rss_val = Rev_Rs_correction(np.exp(Rs_fixed_temps[j]),FieldValues[k])
+
+        Rss_fixed_temps[j].append(Rss_val)
+        Q_fixed_temps[j].append((G_vals[cavity]*1e9)/Rss_val)
+
 for i in range(0, len(fixed_temps)):
 
     R0_guess = min(Rs_fixed_temps[i])
     params = fixed_T_model.make_params(R0=R0_guess, beta=1, gamma=2)
     result = fixed_T_model.fit(Rs_fixed_temps[i], params, B=FieldValues)
 
-    eq_str = ' Equation of fit line: ' + str(round(result.best_values['R0'],2)) + ' ' + \
-    str(round(result.best_values['beta'],2)) + 'B' + ' + ' + str(round(result.best_values['gamma'],2)) + r'B$^2$'
+    #eq_str = ' Equation of fit line: ' + str(round(result.best_values['R0'],2)) + ' ' + \
+    #str(round(result.best_values['beta'],2)) + 'B' + ' + ' + str(round(result.best_values['gamma'],2)) + r'B$^2$'
 
-    ax3.plot(FieldValues, Rs_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]+eq_str), color=colors[i])
-    ax3.plot(FieldValues, result.best_fit, marker='None', linestyle='--',color=colors[i])
+    ax3.plot(FieldValues, np.exp(Rs_fixed_temps[i]), marker='o', linestyle='none', markersize=4, label=(temps_legend[i]), color=colors[i])
+    ax3.plot(FieldValues, np.exp(result.best_fit), marker='None', linestyle='--',color=colors[i])
+    ax4.plot(FieldValues, Q_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]), color=colors[i])
     #ax3.text(0,0,'hi')
 
 x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$', r'6$^{-1}$', r'5$^{-1}$',
@@ -633,5 +670,13 @@ ax3.set_ylabel(r'R$_s[n\Omega]$')
 ax3.legend(title='Temperature [K]')
 ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
 ax3.grid(True)
+
+ax4.set_yscale('log')
+ax4.set_xlabel('RF field [mT]',fontsize=14)
+ax4.set_ylabel('Q',fontsize=14)
+ax4.legend(title='Temperature [K]',fontsize=14)
+ax4.tick_params(axis='both', which='major', labelsize=14)
+#ax4.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax4.grid(True)
 
 plt.show()
