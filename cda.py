@@ -474,7 +474,7 @@ for i in range(0,len(legend_entries)):
         params_bt['Tc'].vary = False
 
         #fit is made in this line
-        result_bt = fmodel.fit(Rs_sep_ln_bt[i], params_bt, T=Tdata_sep_bt[i], method='powell')
+        result_bt = fmodel.fit(Rs_sep_ln_bt[i], params_bt, T=Tdata_sep_bt[i])
 
         #Get the parameters calculated from the fits
         a0_fit_bt = result_bt.best_values['a0']
@@ -648,12 +648,14 @@ x_formatter = FixedFormatter([r'10$^{-1}$', r'9$^{-1}$', r'8$^{-1}$', r'7$^{-1}$
 x_locator = FixedLocator([0.1, 1/9, 0.125, 1/7, 1/6, 0.2, 1/4.5, 0.25, 1/3.5, 1/3, 0.4, 1/2.2, 0.5, 1/1.8, 1/1.7])
 
 ax1.set_yscale('log')
-ax1.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
-ax1.set_ylabel(r'R$_s[n\Omega]$')
+ax1.set_xlabel(r'Inverse Temperature [K$^{-1}$]',fontsize=14)
+ax1.set_ylabel(r'R$_s[n\Omega]$',fontsize=14)
 ax1.xaxis.set_major_formatter(x_formatter)
 ax1.xaxis.set_major_locator(x_locator)
-ax1.legend(title='Field Amplitude')
-ax1.set_title("Surface Resistance vs Inverse Temperature")
+ax1.tick_params(axis='both', which='major', labelsize=14)
+ax1.vlines(x=0.45977, ymin=0, ymax=200, color='gray', linestyle='dashed', label = 'lambda point')
+ax1.legend(title='Field Amplitude',fontsize=14)
+ax1.set_title("Surface Resistance vs Inverse Temperature",fontsize=18)
 ax1.grid(True)
 
 ax2.set_xlabel(r'Inverse Temparature [K$^{-1}$]')
