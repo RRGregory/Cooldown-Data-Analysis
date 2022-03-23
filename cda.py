@@ -73,7 +73,7 @@ print(msg)
 
 in_cavity = input("Enter number: ") #Value for gemetric factor, freqeuncy, and determining which betas to use
 
-fixed_temps = [1.9, 2.2, 2.5, 2.8, 3.1 ,3.4, 3.7, 4.0] #default fixed temperatures to analyze
+fixed_temps = [2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2] #fixed temperatures to analyze
 
 #Information on which functions to fit to the different RF curves
 fit_funs = ['BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS','BCS']
@@ -391,8 +391,8 @@ def BCS(T, a0, a1, R0, DeltaRs, f=freq, Tc=9.25):
     result = ((10**9)*(a0/T)*np.log(C*kB*T/(2*np.pi*hbar*f*10**6))*np.exp(-a1T*Tc/T) + R0 + DeltaRs*Step)
     #print('func', result, a0, a1, R0, DeltaRs)
 
-    return result
-    #return np.log(result)
+    #return result
+    return np.log(result)
 
 def Plotting_BCS_bt(T, a0, a1, R0, DeltaRs, f=freq, Tc=9.25):
     kB = 8.617333262145*10**(-5) #Boltzman constant
@@ -433,8 +433,8 @@ def Poly4(T, a, b, c, d, e):
 def fixed_T_Poly(B, alpha, beta, gamma):
     return (alpha + beta*B + gamma*B*B)
 
-def fixed_T_quad(B, R0q, gammaq):
-    return (R0q + R0q*gammaq*(B/100)*(B/100))
+def fixed_T_quad(B, R0q, gammaq, zela):
+    return (R0q + R0q*gammaq*(B/100)*(B/100) + zela*(B)**4)
 
 #Make the models
 fmodel = Model(BCS)
@@ -449,7 +449,7 @@ fig2, ax2 = plt.subplots(nrows=1, ncols=1)
 fig3, ax3 = plt.subplots(nrows=1, ncols=1)
 fig4, ax4 = plt.subplots(nrows=1, ncols=1)
 
-colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', '0.8' ]
+colors = ['b','orange', 'g', 'r', 'c', 'm', 'y', 'salmon', 'brown', 'lawngreen' , '0.4', 'deeppink', 'peru' ]
 shapes = ['^', 's', 'P', '*', '+', 'd', 'x']
 
 legend_entries = []
@@ -491,7 +491,7 @@ if len(legend_entries) > (len(colors)+len(shapes)):
     print("Warning: This program wasn't expecting more than 19 different field amplitudes. Some field amplitude data sets will be indistiguishable on the plot, as they will be plotted as black dots.")
 
 
-file_fit_params = open('fit_params.txt', 'w')
+#file_fit_params = open('fit_params.txt', 'w')
 #file_fit_params.write("a0 , a1 , R0")
 #file_fit_params.write('\n')
 
@@ -521,7 +521,7 @@ for i in range(0,len(legend_entries)):
             #params['DeltaRs'].set(min=-7,max=1)
 
         #fit is made in this line
-        result = fmodel.fit(Rs_sep[i], params, T=Tdata_sep[i])
+        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], method='powell', weights=weights_sep[i], max_nfev=200000)
         #print(Tdata_sep[i])
         #print(Rs_sep_ln[i])
         #print(result.best_fit)
@@ -547,13 +547,13 @@ for i in range(0,len(legend_entries)):
         #file_fit_params.write(str(R0_fit))
         #file_fit_params.write('\n')
 
-        file_fit_params.write('Bp: ')
-        file_fit_params.write(str(legend_entries[i]))
-        file_fit_params.write(" [mT]")
-        file_fit_params.write('\n')
-        file_fit_params.write(result.fit_report())
-        file_fit_params.write('\n')
-        file_fit_params.write('\n')
+        #file_fit_params.write('Bp: ')
+        #file_fit_params.write(str(legend_entries[i]))
+        #file_fit_params.write(" [mT]")
+        #file_fit_params.write('\n')
+        #file_fit_params.write(result.fit_report())
+        #file_fit_params.write('\n')
+        #file_fit_params.write('\n')
 
     elif fit_funs[i] == 'p2':
         params = p2model.make_params(a=2, b=1, c=res_min)
@@ -659,7 +659,7 @@ for i in range(0,len(legend_entries)):
         ax1.plot(Inv_Tdata_sep[i], result.best_fit, marker='None', linestyle='--',color='black')
         ax2.plot(Inv_Tdata_sep[i],((result.residual))*100/Rs_sep[i], marker='o', markersize=3, color='black', label=legend_entries[i])
 
-file_fit_params.close()
+#file_fit_params.close()
 
 for j in range(0,len(fixed_temps)):
 
@@ -692,24 +692,39 @@ for i in range(0, len(fixed_temps)):
     #ax3.plot(FieldValues, Rs_for_T_vals[i], marker='None', linestyle='--',color=colors[i])
     ax4.plot(FieldValues, Q_fixed_temps[i], marker='o', linestyle='none', markersize=4, label=(temps_legend[i]), color=colors[i])
 """
+file_gamma = open('gamma.txt', 'w')
+file_gamma.write(file_path)
+file_gamma.write('\n')
+
 for i in range(0, len(fixed_temps)):
 
+    Rs_ln = Rs_fixed_temps[i]
+    Rs_expd = []
+
+    for j in range(0,len(Rs_ln)):
+        Rs_expd.append(np.exp(Rs_ln[j]))
+
     max_guess = Rs_fixed_temps[i][0]
-    params = fixed_T_quad_model.make_params(R0q=20, gammaq=9)
-    params['R0q'].set(min=0,max=(max_guess+0.5))
-    params['gammaq'].set(min=0,max=15)
-    result = fixed_T_quad_model.fit(Rs_fixed_temps[i], params, B=FieldValues, method='differential_evoluti', max_nfev=200000)
+    params = fixed_T_quad_model.make_params(R0q=20, gammaq=9, zela=0.1)
+    params['R0q'].set(min=0)
+    params['gammaq'].set(min=0)
+    result = fixed_T_quad_model.fit(Rs_expd, params, B=FieldValues, max_nfev=200000)
+
+    file_gamma.write(str(round(result.best_values['gammaq'],4)))
+    file_gamma.write('\n')
 
     str_gammaq_sign = '-'
     if result.best_values['gammaq'] >= 0:
         str_gammaq_sign = '+'
 
-    eq_str = ' Equation of fit line: ' + str(round(result.best_values['R0q'],3)) + ' ' + str_gammaq_sign + ' ' +\
-    str(round(result.best_values['R0q'],3)) + '*' + str(round(result.best_values['gammaq'],3)) + r'$(B/B_0)^2$'
+    eq_str =  'K  ' + str(round(result.best_values['R0q'],3)) + ' ' + str_gammaq_sign + ' ' +\
+    str(round(result.best_values['R0q'],3)) + '*' + str(round(result.best_values['gammaq'],3)) + r'$(B/B_0)^2$' + ' + ' +\
+    str(round(result.best_values['zela'],3)) + r'$(B/B_0)^4$'
 
-    ax3.plot(FieldValues, (Rs_fixed_temps[i]), marker='o', linestyle='none', markersize=4, label=(temps_legend[i] + eq_str), color=colors[i])
+    ax3.plot(FieldValues, (Rs_expd), marker='o', linestyle='none', markersize=4, label=(temps_legend[i] + eq_str), color=colors[i])
     ax3.plot(FieldValues, (result.best_fit), marker='None', linestyle='--',color=colors[i])
 
+file_gamma.close()
 
 #print("Rs T vals")
 #print(Rs_fixed_temps)
@@ -742,7 +757,7 @@ ax2.grid(True)
 #ax3.set_yscale('log')
 ax3.set_xlabel('RF field [mT]',fontsize=14)
 ax3.set_ylabel(r'R$_s[n\Omega]$',fontsize=14)
-ax3.legend(title='Temperature [K]',fontsize=14)
+ax3.legend(title='Temperature [K] and Equation of fit line',fontsize=14)
 ax3.tick_params(axis='both', which='major', labelsize=14)
 ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
 ax3.grid(True)
