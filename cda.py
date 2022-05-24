@@ -293,12 +293,19 @@ for i in range(0,len(Eaccdata)):
         #print(len(ramp_Eacc),Eaccdata[i])
         try:
             #print(len(ramp_Eacc), len(ramp_Rss))
+            #print(i)
             coef,cov = np.polyfit(ramp_Eacc,ramp_Rss,3, w=ramp_weights, cov=True) #3rd degree polynomial
             #print(coef)
 
             #fit = np.poly1d(coef)
             #print(fit)
         except ValueError:
+            ramp_Eacc.append(Eaccdata[i])
+            ramp_Rss.append(Rssdata[i])
+            ramp_weights.append(weights[i])
+            continue
+
+        except:
             ramp_Eacc.append(Eaccdata[i])
             ramp_Rss.append(Rssdata[i])
             ramp_weights.append(weights[i])
@@ -520,10 +527,17 @@ for i in range(0,len(legend_entries)):
         #if i==5:
             #params['DeltaRs'].set(min=-7,max=1)
 
-        #fit is made in this line
-        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], method='powell', weights=weights_sep[i], max_nfev=200000)
-        #print(Tdata_sep[i])
+        w = []
+
+        for j in range(0,len(Tdata_sep[i])):
+            #print(1/(abs(Tdata_sep[i][j]-2.175)+1))
+            w.append(1/(abs(Tdata_sep[i][j]-2.175)+4.0))
+            #w.append(1/(Tdata_sep[i][j]))
+
         #print(Rs_sep_ln[i])
+        #fit is made in this line
+        result = fmodel.fit(Rs_sep_ln[i], params, T=Tdata_sep[i], method='powell', weights=w, max_nfev=200000)
+        #print(Tdata_sep[i])
         #print(result.best_fit)
 
         #Get the parameters calculated from the fits
@@ -696,6 +710,10 @@ file_gamma = open('gamma.txt', 'w')
 file_gamma.write(file_path)
 file_gamma.write('\n')
 
+file_R0 = open('R0.txt', 'w')
+file_R0.write(file_path)
+file_R0.write('\n')
+
 for i in range(0, len(fixed_temps)):
 
     Rs_ln = Rs_fixed_temps[i]
@@ -711,7 +729,14 @@ for i in range(0, len(fixed_temps)):
     result = fixed_T_quad_model.fit(Rs_expd, params, B=FieldValues, max_nfev=200000)
 
     file_gamma.write(str(round(result.best_values['gammaq'],4)))
+    file_gamma.write(',')
+    file_gamma.write(str(result.params['gammaq'].stderr))
     file_gamma.write('\n')
+
+    file_R0.write(str(round(result.best_values['R0q'],4)))
+    file_R0.write(',')
+    file_R0.write(str(result.params['R0q'].stderr))
+    file_R0.write('\n')
 
     str_gammaq_sign = '-'
     if result.best_values['gammaq'] >= 0:
@@ -725,6 +750,7 @@ for i in range(0, len(fixed_temps)):
     ax3.plot(FieldValues, (result.best_fit), marker='None', linestyle='--',color=colors[i])
 
 file_gamma.close()
+file_R0.close()
 
 #print("Rs T vals")
 #print(Rs_fixed_temps)
@@ -761,12 +787,17 @@ ax3.legend(title='Temperature [K] and Equation of fit line',fontsize=14)
 ax3.tick_params(axis='both', which='major', labelsize=14)
 ax3.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
 ax3.grid(True)
-
+"""
 ax4.set_xlabel('RF field [mT]',fontsize=14)
 ax4.set_ylabel('Q',fontsize=14)
 ax4.legend(title='Temperature [K]',fontsize=14)
 ax4.tick_params(axis='both', which='major', labelsize=14)
 #ax4.set_title('Total Surface Resistance vs RF Field for Fixed Temperatures')
+ax4.grid(True)
+"""
+ax4.set_xlabel('Temperature [K]', fontsize=14)
+ax4.set_ylabel(r'R0 [n$\Omega$]', fontsize=14)
+ax4.tick_params(axis='both', which='major', labelsize=14)
 ax4.grid(True)
 
 plt.show()
